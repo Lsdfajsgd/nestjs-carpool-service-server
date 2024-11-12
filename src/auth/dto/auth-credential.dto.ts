@@ -1,15 +1,5 @@
 // 데이터 유효성 검사를 위한 조건 넣기
-import {
-  IsString,
-  MaxLength,
-  MinLength,
-  Matches,
-  IsNotEmpty,
-  IsEmail,
-  IsEnum,
-  IsOptional,
-  ValidateNested
-} from "class-validator";
+import { IsString,MaxLength,MinLength,Matches,IsNotEmpty,IsEmail,IsEnum,IsOptional,ValidateNested } from "class-validator";
 import { UserRole } from "./user-role.enum";
 import { Type } from "class-transformer";
 import { VehicleInfoDto } from "./vehicle-info.dto";

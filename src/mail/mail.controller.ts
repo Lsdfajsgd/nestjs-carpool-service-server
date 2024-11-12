@@ -10,6 +10,7 @@ export class MailController {
   @Post('/send-code')
   async sendVerificationCode(@Body() body: { email: string }): Promise<string> {
     const { email } = body;
+    
     return await this.mailService.sendVerificationCode(email);
   }
 
