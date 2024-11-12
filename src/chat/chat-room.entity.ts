@@ -9,6 +9,7 @@ export enum ChatRoomStatus{
     ACTIVE = 'active',
     INACTIVE = 'inactive',
 }
+//devlop branch작업
 
 @Entity()
 export class ChatRoom {
