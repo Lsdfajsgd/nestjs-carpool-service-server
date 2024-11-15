@@ -20,7 +20,7 @@ export class ChatGateway {
     console.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('hihi')
+  @SubscribeMessage('enter')
   connectSomeone(
     @MessageBody() data: string,
     @ConnectedSocket() client: Socket,
