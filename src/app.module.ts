@@ -5,6 +5,7 @@ import { typeORMConfig } from "./configs/typeorm.config";
 import { MailModule } from './mail/mail.module';
 import { JwtConfigModule } from './jwt-config/jwt-config.module';
 import { ChatModule } from './chat/chat.module';
+import { ChatGateway } from './chat/chat.gateway';
 
 @Module({
   imports: [
@@ -14,5 +15,6 @@ import { ChatModule } from './chat/chat.module';
     JwtConfigModule,
     ChatModule
   ],
+  providers: [ChatGateway],
 })
 export class AppModule {}

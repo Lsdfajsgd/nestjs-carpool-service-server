@@ -17,12 +17,10 @@ export class ChatRoom {
     id: number;
 
     @Column()
-    @OneToOne(()=> User)
-    from_id: number;
+    from_Id: number;
 
     @Column()
-    @OneToOne(()=> User)
-    to_id: number;
+    to_Id: number;
 
     @Column({ unique: true })
     subject: string;
@@ -42,7 +40,7 @@ export class ChatRoom {
     @Transform(({ value }) => format(value,'yyyy-MM-dd HH:mm-ss'))
     created_at: Date; //채팅방이 생성된 시간을 저장
 
-    @OneToMany(() => Message, message => message.chatRoom)
-    messages: Message[];
+    // @OneToMany(() => Message, message => message.chatRoom)
+    // messages: Message[];
 
 }

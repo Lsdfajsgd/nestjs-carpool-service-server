@@ -11,11 +11,11 @@ export class Message {
     id: number;
 
 
-    @ManyToOne(() => ChatRoom, chatRoom => chatRoom.messages)
-    chatRoom: ChatRoom;
+    @Column()
+    chatRoom_Id: number;
 
-    @ManyToOne(() => User, user => user.messages)
-    sender: User;
+    @Column()
+    sender_Id: number;
 
     @Column()
     is_from_senders: boolean;

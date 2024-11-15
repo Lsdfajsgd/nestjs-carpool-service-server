@@ -40,13 +40,13 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   seatingCapacity?: number;
 
-  @OneToOne(() => ChatRoom, chatRoom => chatRoom.from_id)
-  chatRoomsFrom: ChatRoom[];
+  // @OneToOne(() => ChatRoom, chatRoom => chatRoom.from_id)
+  // chatRoomsFrom: ChatRoom[];
 
-  @OneToOne(() => ChatRoom, chatRoom => chatRoom.to_id)
-  chatRoomsTo: ChatRoom[];
+  // @OneToOne(() => ChatRoom, chatRoom => chatRoom.to_id)
+  // chatRoomsTo: ChatRoom[];
 
-  @OneToOne(() => Message, message => message.sender)
-  messages: Message[];
+  // @OneToOne(() => Message, message => message.sender)
+  // messages: Message[];
 
 }
