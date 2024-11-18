@@ -12,6 +12,8 @@
     <script src="https://cdn.socket.io/socket.io-2.3.1.js"></script>
 
     <script>
+
+        
         const socket = io('ws://localhost:81/chatroom');
         const nickname = prompt('닉네임을 알려주세요.');
         if (!nickname) {
@@ -21,7 +23,7 @@
         if (!room) {
             window.location.reload();
         }
-        socket.emit('hihi', nickname, room);
+        socket.emit('enter', nickname, room);
 
         socket.on('connect', () => {
             /* 누군가 채팅침 */
