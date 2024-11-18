@@ -1,7 +1,5 @@
 import {BaseEntity, Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn, Unique} from "typeorm";
 import { UserRole } from "./dto/user-role.enum";
-import { ChatRoom } from "src/chat/chat-room.entity";
-import { Message } from "src/chat/message.entity";
 
 @Entity()
 @Unique(['username']) // email 유니크는 테스트를 위해 잠시 off
