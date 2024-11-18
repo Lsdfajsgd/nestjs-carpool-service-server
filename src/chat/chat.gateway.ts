@@ -7,6 +7,7 @@ import {
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
 
+
 @WebSocketGateway(81, { namespace: 'chatroom' })
 export class ChatGateway {
   @WebSocketServer()
@@ -14,6 +15,9 @@ export class ChatGateway {
 
   //방변수 설정
   private rooms: { [room: string]: Set<string> } = {};
+
+  // 방별 메세지 로그를 저장
+  private messageLogs: { [room: string]: Array<{ nickname: string; message: string }> } = {};
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
@@ -76,6 +80,13 @@ export class ChatGateway {
 
     console.log(`${nickname}님이 ${room}방에 메시지를 보냈습니다: ${message}`);
 
+    //메세지 로그에 저장
+    if (!this.messageLogs[room]) {
+      this.messageLogs[room] = [];
+    }
+    this.messageLogs[room].push({ nickname, message });
+
+
     // 특정 방에 있는 모든 사용자에게 메시지 전송
     this.server.to(room).emit('message', { nickname, message });
 
@@ -102,6 +113,8 @@ export class ChatGateway {
     // 방이 비어 있으면 방 자체를 삭제
     if (this.rooms[room].size === 0) {
       delete this.rooms[room];
+      delete this.messageLogs[room]; // 메시지 로그 삭제
+      console.log(`Room "${room}" has been deleted along with its message logs.`);
     }
 
     console.log(`${nickname}님이 ${room}방에서 나갔습니다.`);
@@ -115,7 +128,7 @@ export class ChatGateway {
     const updatedUserList = Array.from(this.rooms[room] || []);
     this.server.to(room).emit('userList', { room, users: updatedUserList });
   }
-
+  //유저 목록 출력
   @SubscribeMessage('getUserList')
   getUserList(
     @MessageBody() room: string,
@@ -133,6 +146,27 @@ export class ChatGateway {
     console.log(`User list for room "${room}":`, userList);
     client.emit('userList', { room, users: userList });
   }
+
+//메세지 로그 출력
+  @SubscribeMessage('getMessageLog')
+getMessageLog(
+  @MessageBody() room: string,
+  @ConnectedSocket() client: Socket,
+) {
+  // 방이 존재하지 않으면 에러 반환
+  if (!this.rooms[room]) {
+    console.log(`Message log request failed: Room "${room}" does not exist.`);
+    client.emit('error', { message: `Room "${room}" does not exist.` });
+    return;
+  }
+
+  // 메시지 로그 반환
+  const logs = this.messageLogs[room] || [];
+  console.log(`Message log for room "${room}":`, logs);
+  client.emit('messageLog', { room, logs });
+}
+
+
 
   // 사용자 목록 반환 메서드
   getRoomUsers(room: string): string[] {

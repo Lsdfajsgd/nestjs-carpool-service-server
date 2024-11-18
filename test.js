@@ -25,6 +25,13 @@ socket.on("connect", () => {
         console.log("User List:", userList);
     });
 
+    //메세자 로그 수신
+    socket.emit('getMessageLog', "room1");
+    socket.on('messageLog', (data) => {
+        console.log('Message Log:', data.logs);
+    });
+
+
     // 방 나가기
     setTimeout(() => {
         socket.emit("leave", ["John2", "room1"]);
