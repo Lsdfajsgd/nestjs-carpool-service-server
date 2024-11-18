@@ -1,32 +1,23 @@
-import { Module} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import {UserRepository} from "./user.repository";
-import {TypeOrmModule} from "@nestjs/typeorm";
-import {JwtModule} from "@nestjs/jwt";
-import {PassportModule} from "@nestjs/passport";
-import {JwtStrategy} from "./jwt.strategy";
-import { MailModule } from "../mail/mail.module";
-import { JwtConfigModule } from "../jwt-config/jwt-config.module";
+import { UserRepository } from './user.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [
-    // Passport 모듈 등록
-    // PassportModule.register({defaultStrategy: 'jwt'}),
-    //
-    // // JWT 모듈 등록
-    // JwtModule.register({
-    //   secret:'Secret1234',
-    //   signOptions:{
-    //     expiresIn:3600
-    //   }
-    // }),
-    JwtConfigModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }), // Passport 설정
+    JwtModule.register({
+      secret: 'Secret1234',
+      signOptions: { expiresIn: 3600 }, // 토큰 만료 시간
+    }),
     TypeOrmModule.forFeature([UserRepository]),
-    MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, UserRepository, JwtStrategy], // JwtStrategy룰 이 Auth 모듈에서 사용할수 있게 등록
-  exports: [JwtStrategy], // JwtStrategy, PassportModule룰 다른 모듈에서 사용할수 있게 등록
+  providers: [AuthService, UserRepository, JwtStrategy],
+  exports: [AuthService, JwtStrategy, PassportModule, JwtModule], // JwtModule 추가
 })
 export class AuthModule {}

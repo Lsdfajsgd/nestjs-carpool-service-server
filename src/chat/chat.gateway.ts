@@ -6,10 +6,16 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
+import { ChatService } from './chat.service';
+import { Injectable } from '@nestjs/common';
 
 
 @WebSocketGateway(81, { namespace: 'chatroom' })
+@Injectable()
 export class ChatGateway {
+  constructor(
+    private chatService: ChatService,
+  ){}
   @WebSocketServer()
   server: Server;
 
@@ -19,9 +25,18 @@ export class ChatGateway {
   // 방별 메세지 로그를 저장
   private messageLogs: { [room: string]: Array<{ nickname: string; message: string }> } = {};
 
-  handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
-  }
+  async handleConnection(client: Socket) {
+    const token = client.handshake.headers.authorization?.split(' ')[1];
+
+    try {
+        const username = this.chatService.validateToken(token); // ChatService를 통해 토큰 검증
+        client.data.user = username;
+        console.log(`Client connected: ${username}`);
+    } catch (error) {
+        client.emit('error', { message: error.message });
+        client.disconnect();
+    }
+}
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
