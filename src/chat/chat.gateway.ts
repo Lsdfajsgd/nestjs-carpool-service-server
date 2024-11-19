@@ -49,6 +49,14 @@ export class ChatGateway {
   ) {
     const username = client.data.user; // handleConnection에서 저장된 username 활용
 
+    // 현재 사용자가 이미 속해 있는 방이 있는지 확인
+    const currentRoom = Object.keys(this.rooms).find((r) => this.rooms[r].has(username));
+    if (currentRoom) {
+      console.log(`Enter failed: User "${username}" is already in room "${currentRoom}".`);
+      client.emit('error', { message: `You are already in the room "${currentRoom}". Leave the room before joining another one.` });
+      return; // 중단
+    }
+
     if (!this.rooms[room]) {
       this.rooms[room] = new Set();
     }
