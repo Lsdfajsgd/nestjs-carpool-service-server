@@ -24,15 +24,15 @@ export class JwtStrategy extends PassportStrategy(Strategy){
     });
   }
 
-
   async validate(payload) : Promise<User> {
-    const {username} = payload;
+    const {name} = payload;
     //payload에 있는 유저이름이 데이터베이스에서 있는 유저인지 확인
-    const user =  await this.userRepository.findOne({ where: { username } });
+    console.log("Payload received:", payload);
+    const user =  await this.userRepository.findOne({ where: { name } });
 
     if (!user) {
       // 존재하지 않을 시 에러를 던져줌.
-      throw new UnauthorizedException(`Can't find user with username ${username}`);
+      throw new UnauthorizedException(`Can't find user with username ${name}`);
     }
 
     return user;

@@ -4,7 +4,7 @@ export class AuthLoginDto {
   @IsString()
   @MinLength(4)
   @MaxLength(20)
-  username: string;
+  name: string;
 
   @IsString()
   @MinLength(4)

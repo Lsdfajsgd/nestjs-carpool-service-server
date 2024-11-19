@@ -1,50 +1,61 @@
-import {BaseEntity, Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn, Unique} from "typeorm";
-import { UserRole } from "./dto/user-role.enum";
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn, OneToOne,
+} from 'typeorm';
+import { UserRole } from './dto/user-role.enum';
+import { Profile } from './profile.entity';
 
-@Entity()
-@Unique(['username']) // email 유니크는 테스트를 위해 잠시 off
+@Entity('users')
 export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ name: 'email', type: 'varchar', unique: true })
   email: string;
 
-  @Column()
-  username: string;
-
-  @Column()
+  @Column({ name: 'password', type: 'varchar' })
   password: string;
 
-  // 휴대전화 번호
-  @Column({ nullable: true })
+  @Column({ name: 'name', type: 'varchar', length: 100 })
+  name: string;
+
+  @Column({ name: 'phone_number', type: 'varchar', nullable: true })
   phoneNumber: string;
 
-  @Column({ type: 'enum', enum: UserRole })
+  @Column({ name: 'role', type: 'enum', enum: UserRole })
   role: UserRole;
 
-  @Column()
-  points : number;
+  @Column({ name: 'points', type: 'int', default: 0 })
+  points: number;
 
-  // 차량 종류
-  @Column({ nullable: true })
-  vehicleModel?: string;
+  @Column({ name: 'penalty_point', type: 'int', default: 0 })
+  penaltyPoint: number;
 
-  // 차량 번호
-  @Column({ nullable: true })
-  licensePlate?: string;
+  @CreateDateColumn({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  createdAt: Date;
 
-  // 제한 인원
-  @Column({ nullable: true })
-  seatingCapacity?: number;
+  @UpdateDateColumn({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
+  updatedAt: Date;
 
-  // @OneToOne(() => ChatRoom, chatRoom => chatRoom.from_id)
-  // chatRoomsFrom: ChatRoom[];
+  @Column({ name: 'last_login', type: 'timestamp', nullable: true })
+  lastLogin: Date;
 
-  // @OneToOne(() => ChatRoom, chatRoom => chatRoom.to_id)
-  // chatRoomsTo: ChatRoom[];
+  @Column({ name: 'refresh_token', type: 'varchar', nullable: true })
+  refreshToken: string | null;
 
-  // @OneToOne(() => Message, message => message.sender)
-  // messages: Message[];
-
+  @OneToOne(() => Profile, (profile) => profile.user)
+  profile: Profile;
 }

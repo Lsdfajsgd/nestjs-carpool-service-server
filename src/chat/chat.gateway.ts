@@ -48,7 +48,7 @@ export class ChatGateway {
     @ConnectedSocket() client: Socket,
   ) {
     const username = client.data.user; // handleConnection에서 저장된 username 활용
-
+    
     // 현재 사용자가 이미 속해 있는 방이 있는지 확인
     const currentRoom = Object.keys(this.rooms).find((r) => this.rooms[r].has(username));
     if (currentRoom) {
@@ -101,7 +101,6 @@ export class ChatGateway {
       client.emit('error', { message: `Cannot send message. Room "${room}" does not exist or is empty.` });
       return;
     }
-
     // username이 해당 방에 속해 있는지 확인
     if (!this.rooms[room].has(username)) {
       console.log(`Message not sent: User "${username}" is not in room "${room}".`);
