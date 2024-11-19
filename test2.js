@@ -3,7 +3,7 @@ const io = require("socket.io-client");
 // 서버와 연결
 const socket = io("http://localhost:81/chatroom", {
     auth: {
-        token: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Imp1bmdtaW4iLCJpYXQiOjE3MzE5MzYwNzAsImV4cCI6MTczMTkzOTY3MH0.JE-31lY1xj7JUc0hI1TPXRIXq3ZxZrkZvkalx9U_BRs", // Postman으로 발급받은 JWT 토큰을 입력
+        token: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Imp1bmdtaW4iLCJpYXQiOjE3MzE5ODU3NDksImV4cCI6MTczMTk4OTM0OX0.YI6kH37hzhFAauY38XaKLB8nyfwt6mLx6gBacxw0Tig", // Postman으로 발급받은 JWT 토큰을 입력
     },
 });
 

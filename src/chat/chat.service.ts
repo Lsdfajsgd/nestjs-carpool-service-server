@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 export class ChatService {
     private rooms: { [room: string]: Set<string> } = {};
 
-    constructor(private jwtService: JwtService) {}
+    constructor(private jwtService: JwtService) { }
 
     validateToken(token: string): string {
         if (!token) {
@@ -14,7 +14,7 @@ export class ChatService {
 
         try {
             const payload = this.jwtService.verify(token, { secret: 'Secret1234' });
-            return payload.username;
+            return payload.username; // 토큰에서 username 반환
         } catch (error) {
             throw new UnauthorizedException('Invalid token');
         }
@@ -42,5 +42,12 @@ export class ChatService {
 
     isUserInRoom(room: string, username: string): boolean {
         return !!this.rooms[room]?.has(username);
+    }
+
+    deleteRoom(room: string) {
+        if (this.rooms[room]) {
+            delete this.rooms[room];
+            console.log(`Room "${room}" has been deleted.`);
+        }
     }
 }
