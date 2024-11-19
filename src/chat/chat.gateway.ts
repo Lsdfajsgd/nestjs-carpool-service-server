@@ -9,7 +9,7 @@ import { Socket, Server } from 'socket.io';
 import { ChatService } from './chat.service';
 import { Injectable } from '@nestjs/common';
 
-
+//devlop branch내용
 @WebSocketGateway(81, { namespace: 'chatroom' })
 @Injectable()
 export class ChatGateway {
