@@ -6,7 +6,7 @@ import { typeORMConfig } from "./configs/typeorm.config";
 import { MailModule } from './mail/mail.module';
 import { JwtConfigModule } from './jwt-config/jwt-config.module';
 import { ChatModule } from './chat/chat.module';
-// import { MatchingModule } from './matching/matching.module';
+import { MatchingModule } from './matching/matching.module';
 
 @Module({
   imports: [
@@ -23,7 +23,7 @@ import { ChatModule } from './chat/chat.module';
     MailModule,
     JwtConfigModule,
     ChatModule,
-    // MatchingModule
+    MatchingModule,
   ],
 })
 export class AppModule {}

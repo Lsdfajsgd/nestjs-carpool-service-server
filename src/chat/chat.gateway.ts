@@ -31,15 +31,51 @@ export class ChatGateway {
     try {
       const userId = await this.chatService.validateToken(token); // await를 통해 Promise문제 해결+ ChatService를 통해 토큰 검증
       client.data.userId = userId; //클라이언트 데이터에 userId저장
-      console.log(`Client connected: ${userId}`);
+
+      //사용자가 속한 방 확인 및 입장
+      const matchedRides = await this.chatService.createChatRoomForMatchedRides();
+      matchedRides.forEach((roomName) => {
+        if (this.chatService.getUsersInRoom(roomName).includes(userId)) {
+            client.join(roomName);
+            console.log(`User ${userId} automatically joined room ${roomName}`);
+        }
+      });
+      console.log(`Client connected: user_Id[${userId}]`);
     } catch (error) {
       client.emit('error', { message: error.message });
       client.disconnect();
     }
   }
 
-  handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+  async handleDisconnect(client: Socket) {
+    const token = client.handshake.headers.authorization?.split(' ')[1];
+    const userId = await this.chatService.validateToken(token);
+    console.log(`Client disconnected: user_Id[${userId}]`);
+  }
+
+  
+//matching과 연결된 방입장
+  @SubscribeMessage('joinRoom')
+  async joinRoom(
+    @MessageBody() rideRequestId: number,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data.userId; // WebSocket 연결 시 저장된 userId 활용
+    const roomName = `ride_request_${rideRequestId}`;
+
+    // //만약 만들어진 방이 없으면 방 생성
+    // if (!this.rooms[roomName]) {
+    //   this.rooms[roomName] = new Set();
+    // }
+
+    if (!this.chatService.getUsersInRoom(roomName).includes(userId)) {
+      this.chatService.addUserToRoom(roomName, userId);
+      client.join(roomName);
+      console.log(`User ${userId} joined room ${roomName}`);
+      this.server.to(roomName).emit('userJoined', { userId });
+    } else {
+      client.emit('error', { message: `You are already in the room "${roomName}".` });
+    }
   }
 
   @SubscribeMessage('enter')
@@ -48,7 +84,7 @@ export class ChatGateway {
     @ConnectedSocket() client: Socket,
   ) {
     const userId = client.data.userId; // handleConnection에서 저장된 userId 활용
-    
+
     // 현재 사용자가 이미 속해 있는 방이 있는지 확인
     const currentRoom = Object.keys(this.rooms).find((r) => this.rooms[r].has(userId));
     if (currentRoom) {
@@ -86,7 +122,6 @@ export class ChatGateway {
     });
   }
 
-
   @SubscribeMessage('send')
   sendMessage(
     @MessageBody() data: [string, string], //room과 message만 전달받음
@@ -101,7 +136,7 @@ export class ChatGateway {
       client.emit('error', { message: `Cannot send message. Room "${room}" does not exist or is empty.` });
       return;
     }
-    // username이 해당 방에 속해 있는지 확인
+    // userId가 해당 방에 속해 있는지 확인
     if (!this.rooms[room].has(userId)) {
       console.log(`Message not sent: User "users_Id${userId}" is not in room "${room}".`);
       client.emit('error', { message: `Cannot send message. User "user_Id${userId}" is not in room "${room}".` });
@@ -116,10 +151,8 @@ export class ChatGateway {
     }
     this.messageLogs[room].push({ id: userId, message });
 
-
     // 특정 방에 있는 모든 사용자에게 메시지 전송
     this.server.to(room).emit('message', { userId: userId, message });
-
     // console.log(`${client.id} : ${data}`);
     // this.broadcast(room, client, [nickname, message]);
   }
@@ -213,8 +246,6 @@ export class ChatGateway {
     console.log(`Message log for room "${room}":`, logs);
     client.emit('messageLog', { room, logs });
   }
-
-
 
   // 사용자 목록 반환 메서드
   getRoomUsers(room: string): number[] {

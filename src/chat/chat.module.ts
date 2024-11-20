@@ -3,14 +3,11 @@ import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service'
 import { AuthModule } from '../auth/auth.module';
 import { JwtConfigModule } from 'src/jwt-config/jwt-config.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserRepository } from '../auth/user.repository';
 import { ConfigModule } from '@nestjs/config';
 
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([]), //UserRepository 등록
         AuthModule,
         ConfigModule,
         JwtConfigModule,

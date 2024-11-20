@@ -5,6 +5,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserRepository } from 'src/auth/user.repository';
 import { User } from 'src/auth/user.entity';
 import { DataSource } from 'typeorm';
+import { RidePassengersEntity } from '../matching/ride-passengers.entity';
+import { RideRequestsEntity } from '../matching/ride-requests.entity';
 
 @Injectable()
 export class ChatService {
@@ -14,7 +16,53 @@ export class ChatService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         private readonly dataSource: DataSource, // DataSource 주입
-    ) {}
+    ) { }
+
+    //방을 그룹화해서 배열으로 보여줌
+    async createChatRoomForMatchedRides(): Promise<string[]> {
+        const matchedRides = await this.dataSource.getRepository(RideRequestsEntity).find({
+            where: { status: 'matched' },
+            relations: ['driver', 'passengers.passenger'],
+        });
+
+        const createdRooms: string[] = [];
+
+        for (const ride of matchedRides) {
+            const roomName = `ride_request_${ride.id}`;
+            this.rooms[roomName] = new Set();
+
+            // 운전자를 추가
+            if (ride.driver) {
+                this.rooms[roomName].add(ride.driver.id);
+            }
+
+            // 탑승자를 추가
+            ride.passengers.forEach((passenger) => {
+                this.rooms[roomName].add(passenger.passenger.id);
+            });
+
+            createdRooms.push(roomName);
+            console.log(`Chat room created: ${roomName} with users:`, Array.from(this.rooms[roomName]));
+        }
+
+        return createdRooms;
+    }
+    //rideRequest의 id가져오기
+    async getRideRequestById(rideRequestId: number): Promise<RideRequestsEntity> {
+        return this.dataSource.getRepository(RideRequestsEntity).findOne({
+            where: { id: rideRequestId },
+        });
+    }
+    //rideRequest의 status 상태가 matched인지 가쟈오기
+    async getMatchedRidesForUser(userId: number): Promise<RideRequestsEntity[]> {
+        return this.dataSource.getRepository(RideRequestsEntity).find({
+            where: [
+                { driver: { id: userId }, status: 'matched' },
+            ],
+            relations: ['driver'],
+        });
+    }
+
 
     async validateToken(token: string): Promise<number> {
         if (!token) {
