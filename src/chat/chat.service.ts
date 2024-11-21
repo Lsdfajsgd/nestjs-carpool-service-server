@@ -11,6 +11,7 @@ import { RideRequestsEntity } from '../matching/ride-requests.entity';
 @Injectable()
 export class ChatService {
     private rooms: { [room: string]: Set<number> } = {};
+    private messageLogs: { [room: string]: Array<{ id: number; message: string }> } = {};
 
     constructor(
         private readonly jwtService: JwtService,
@@ -21,7 +22,7 @@ export class ChatService {
     //방을 그룹화해서 배열으로 보여줌
     async createChatRoomForMatchedRides(): Promise<string[]> {
         const matchedRides = await this.dataSource.getRepository(RideRequestsEntity).find({
-            where: { status: 'matched' },
+            where: { status: "matched"},
             relations: ['driver', 'passengers.passenger'],
         });
 
@@ -42,7 +43,6 @@ export class ChatService {
             });
 
             createdRooms.push(roomName);
-            // console.log(`Chat room created: ${roomName} with users:`, Array.from(this.rooms[roomName]));
         }
 
         return createdRooms;
@@ -70,16 +70,16 @@ export class ChatService {
         }
         try {
             const secret = this.configService.get<string>('JWT_SECRET');
-            console.log('JWT Secret:', secret); // JWT 시크릿 확인
+            // console.log('JWT Secret:', secret); // JWT 시크릿 확인
             const payload = this.jwtService.verify(token, { secret });
-            console.log('Token payload:', payload); // 페이로드 확인
+            // console.log('Token payload:', payload); // 페이로드 확인
             if (!payload.id) {
                 throw new UnauthorizedException('Invalid token payload');
             }
             // 여기서 DB를 확인해 사용자 유효성을 검증
             const userRepository = this.dataSource.getRepository(User); // 수동 접근
             const user = await userRepository.findOne({ where: { id: payload.id } });
-            console.log('User found:', user); // 사용자 확인
+            // console.log('User found:', user); // 사용자 확인
             if (!user) {
                 throw new UnauthorizedException('Invalid user ID in token');
             }
@@ -120,5 +120,31 @@ export class ChatService {
             delete this.rooms[room];
             console.log(`Room "${room}" has been deleted.`);
         }
+    }
+
+    validateRoomAndUser(room: string, userId: number): void {
+        if (!this.rooms[room]) {
+            throw new Error(`Room "${room}" does not exist.`);
+        }
+        if (!this.isUserInRoom(room, userId)) {
+            throw new Error(`User "user_Id${userId}" is not a member of the room "${room}".`);
+        }
+    }
+
+    addMessageToLog(room: string, message: { id: number; message: string }): void {
+        if (!this.rooms[room]) {
+            throw new Error(`Room "${room}" does not exist.`);
+        }
+        if (!this.messageLogs[room]) {
+            this.messageLogs[room] = [];
+        }
+        this.messageLogs[room].push(message);
+    }
+
+    getMessageLogs(room: string): Array<{ id: number; message: string }> {
+        if (!this.rooms[room]) {
+            throw new Error(`Room "${room}" does not exist.`);
+        }
+        return this.messageLogs[room] || [];
     }
 }

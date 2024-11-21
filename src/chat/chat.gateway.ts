@@ -20,10 +20,10 @@ export class ChatGateway {
   server: Server;
 
   //방변수 설정
-  private rooms: { [room: string]: Set<number> } = {};
+  // private rooms: { [room: string]: Set<number> } = {};
 
   // 방별 메세지 로그를 저장
-  private messageLogs: { [room: string]: Array<{ id: number; message: string }> } = {};
+  // private messageLogs: { [room: string]: Array<{ id: number; message: string }> } = {};
 
   async handleConnection(client: Socket) {
     const token = client.handshake.headers.authorization?.split(' ')[1];
@@ -34,12 +34,15 @@ export class ChatGateway {
 
       //사용자가 속한 방 확인 및 입장
       const matchedRides = await this.chatService.createChatRoomForMatchedRides();
+    
+      // 모든 방의 상태가 유효하면 연결
       matchedRides.forEach((roomName) => {
         if (this.chatService.getUsersInRoom(roomName).includes(userId)) {
           client.join(roomName);
           console.log(`User ${userId} automatically joined room ${roomName}`);
         }
       });
+
       console.log(`Client connected: user_Id[${userId}]`);
     } catch (error) {
       client.emit('error', { message: error.message });
@@ -47,10 +50,16 @@ export class ChatGateway {
     }
   }
 
+  // 클라이언트 연결 해제 처리
   async handleDisconnect(client: Socket) {
     const token = client.handshake.headers.authorization?.split(' ')[1];
-    const userId = await this.chatService.validateToken(token);
-    console.log(`Client disconnected: user_Id[${userId}]`);
+
+    try {
+      const userId = await this.chatService.validateToken(token);
+      console.log(`Client disconnected: user_Id[${userId}]`);
+    } catch (error) {
+      console.error('Error during disconnection:', error.message);
+    }
   }
 
 
@@ -69,24 +78,16 @@ export class ChatGateway {
   ) {
     const [room, message] = data;
     const userId = client.data.userId; // handleConnection에서 저장된 userId 활용
-    
-    // userId가 해당 방에 속해 있는지 확인
-    if (!this.chatService.isUserInRoom(room, userId)) {
-      console.log(`Send failed: User "user_Id${userId}" is not a member of the room "${room}". `);
-      client.emit('error', { message: `You are not a member of the room "${room}".` });
-      return;
+
+    try {
+      this.chatService.validateRoomAndUser(room, userId);
+      this.chatService.addMessageToLog(room, { id: userId, message });
+      this.server.to(room).emit('message', { userId, message });
+      console.log(`{ (${room}) user_Id [${userId}] } : `, message)
+    } catch (error) {
+      console.error(error.message);
+      client.emit('error', { message: error.message });
     }
-
-    console.log(`users_Id${userId}님이 ${room}방에 메시지를 보냈습니다: ${message}`);
-
-    // 메시지 로그에 저장
-    if (!this.messageLogs[room]) {
-      this.messageLogs[room] = [];
-    }
-    this.messageLogs[room].push({ id: userId, message });
-
-    // 특정 방에 있는 모든 사용자에게 메시지 전송
-    this.server.to(room).emit('message', { userId, message });
   }
 
   @SubscribeMessage('leave')
@@ -96,44 +97,29 @@ export class ChatGateway {
   ) {
     const userId = client.data.userId; // handleConnection에서 저장된 userId 활용
 
-    // 방이 존재하지 않는 경우 처리
-    // if (!this.rooms[room]) {
-    //   console.log(`Leave failed: Room "${room}" does not exist.`);
-    //   client.emit('error', { message: `Room "${room}" does not exist.` });
-    //   return;
-    // }
+    try {
+      this.chatService.validateRoomAndUser(room, userId);
+      this.chatService.removeUserFromRoom(room, userId);
 
-    // 사용자가 방에 속해 있지 않은 경우 처리
-    if (!this.chatService.isUserInRoom(room, userId)) {
-      console.log(`Leave failed: User "user_Id${userId}" is not in room "${room}".`);
-      client.emit('error', {
-        message: `You are not a member of the room "${room}".`,
-      });
-      return;
+      if (this.chatService.getUsersInRoom(room).length === 0) {
+        this.chatService.deleteRoom(room);
+      }
+
+      client.leave(room);
+      const leaveMessage = `User user_Id${userId} has left the room.`;
+      this.server.to(room).emit('leaveRoom', { room, message: leaveMessage });
+
+      const updatedUserList = this.chatService.getUsersInRoom(room);
+      if (updatedUserList.length > 0) {
+        this.server.to(room).emit('userList', { room, users: updatedUserList });
+      }
+
+      console.log(`user_Id[${userId}] left room [${room}].`);
+    } catch (error) {
+      console.error(error.message);
+      client.emit('error', { message: error.message });
     }
-
-    // 방에서 사용자 제거
-    this.chatService.removeUserFromRoom(room, userId);
-
-    // 방이 비어 있으면 방과 메시지 로그 삭제
-    if (this.chatService.getUsersInRoom(room).length === 0) {
-      delete this.rooms[room];
-      delete this.messageLogs[room];
-      console.log(`Room "${room}" has been deleted along with its message logs.`);
-    }
-
-    console.log(`users_Id[${userId}]님이 ${room}방에서 나갔습니다.`);
-    client.leave(room);
-
-    // 나머지 사용자에게 알림
-    const leaveMessage = `User user_Id${userId} has left the room.`;
-    this.server.to(room).emit('leaveRoom', { room, message: leaveMessage });
-
-    // 방에 남아 있는 사용자 목록 전송
-    const updatedUserList = this.chatService.getUsersInRoom(room);
-    if (updatedUserList.length > 0) {
-      this.server.to(room).emit('userList', { room, users: updatedUserList });
-    }
+    client.disconnect();
   }
 
   //유저 목록 출력
@@ -144,34 +130,15 @@ export class ChatGateway {
   ) {
     const userId = client.data.userId; // 현재 사용자의 username
 
-    // 방이 존재하지 않는 경우 처리
-    // if (!this.rooms[room]) {
-    //   console.log(`User list request failed: Room "${room}" does not exist.`);
-    //   client.emit('error', { message: `Room "${room}" does not exist.` });
-    //   return;
-    // }
-
-    // 사용자가 방에 없는 경우 처리
-    if (!this.chatService.isUserInRoom(room, userId)) {
-      console.log(`Access denied: User "user_Id${userId}" is not in room "${room}".`);
-      client.emit('error', {
-        message: `You are not a member of the room "${room}".`,
-      });
-      return;
+    try {
+      this.chatService.validateRoomAndUser(room, userId);
+      const userList = this.chatService.getUsersInRoom(room);
+      client.emit('userList', { room, users: userList });
+      console.log(`User list for room [${room}]:`, userList);
+    } catch (error) {
+      console.error(error.message);
+      client.emit('error', { message: error.message });
     }
-
-    // 방에 있는 사용자 목록 가져오기
-    const userList = this.chatService.getUsersInRoom(room);
-
-    // 빈 방인 경우 로깅
-    if (userList.length === 0) {
-      console.log(`User list request: Room "${room}" is empty.`);
-    }
-
-    console.log(`User list for room "${room}":`, userList);
-
-    // 사용자 목록 반환
-    client.emit('userList', { room, users: userList });
   }
 
   //메세지 로그 출력
@@ -182,26 +149,15 @@ export class ChatGateway {
   ) {
     const userId = client.data.userId; // 현재 사용자의 username
 
-    // 사용자가 방에 속해 있지 않은 경우 처리
-    if (!this.chatService.isUserInRoom(room, userId)) {
-      console.log(`Access denied: User "user_Id${userId}" is not in room "${room}".`);
-      client.emit('error', {
-        message: `You are not a member of the room "${room}".`,
-      });
-      return;
+    try {
+      this.chatService.validateRoomAndUser(room, userId);
+      const logs = this.chatService.getMessageLogs(room);
+      client.emit('messageLog', { room, logs });
+      console.log(`Message log for room [${room}]:`, logs);
+    } catch (error) {
+      console.error(error.message);
+      client.emit('error', { message: error.message });
     }
-
-    // 메시지 로그 가져오기
-    const logs = this.messageLogs[room] || [];
-    // 빈 로그 처리 및 로깅
-    if (logs.length === 0) {
-      console.log(`Message log request: Room "${room}" has no messages.`);
-    } else {
-      console.log(`Message log for room "${room}":`, logs);
-    }
-
-    // 클라이언트에 메시지 로그 반환
-    client.emit('messageLog', { room, logs });
   }
 
 }
