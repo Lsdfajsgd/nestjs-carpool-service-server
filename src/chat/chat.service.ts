@@ -42,7 +42,7 @@ export class ChatService {
             });
 
             createdRooms.push(roomName);
-            console.log(`Chat room created: ${roomName} with users:`, Array.from(this.rooms[roomName]));
+            // console.log(`Chat room created: ${roomName} with users:`, Array.from(this.rooms[roomName]));
         }
 
         return createdRooms;
