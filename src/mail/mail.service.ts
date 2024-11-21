@@ -1,7 +1,7 @@
 // src/mail/mail.service.ts
 import { BadRequestException, ConflictException, GoneException, Injectable } from "@nestjs/common";
 import { MailerService } from '@nestjs-modules/mailer';
-import { UserRepository } from '../auth/user.repository';
+import { UsersRepository } from '../auth/repositories/users.repository';
 
 @Injectable()
 export class MailService {
@@ -9,7 +9,7 @@ export class MailService {
 
   constructor(
     private readonly mailerService: MailerService,
-    private userRepository: UserRepository,
+    private userRepository: UsersRepository,
   ) {}
 
   // 인증코드 생성 및 저장

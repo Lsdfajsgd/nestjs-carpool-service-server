@@ -1,18 +1,24 @@
 import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import {InjectRepository} from "@nestjs/typeorm";
-import {UserRepository} from "./user.repository";
+import {UsersRepository} from "./repositories/users.repository";
 import {AuthCredentialDto} from "./dto/auth-credential.dto";
 import * as bcrypt from 'bcryptjs';
 import {JwtService} from "@nestjs/jwt";
 import { AuthLoginDto } from "./dto/auth-login.dto";
+import { VehicleInfoRepository } from "./repositories/vehicle-info.repository";
+import { Users } from "./entities/users.entity";
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(UserRepository)
-    private userRepository: UserRepository,
+    @InjectRepository(UsersRepository)
+    private userRepository: UsersRepository,
+    @InjectRepository(VehicleInfoRepository)
+    private vehicleInfoRepository: VehicleInfoRepository,
     // jwt 서비스 등록
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   // 회원가입
@@ -28,8 +34,11 @@ export class AuthService {
 
     // 해쉬된 비밀번호를 비교하기 위해서 bcrypt의 compare() 메소드사용
     if (user && (await bcrypt.compare(password, user.password))) {
+      // 차량 정보 가져오기
+      const vehicleInfo = await this.vehicleInfoRepository.findVehicleInfoByUserId(user.id);
+
       // 유저 토큰 생성 (Secret + Payload) 가 필요하다.
-      const payload = { username }; // payload에는 중요한 정보를 넣어두면안됨 토큰을 사용해서 정보를 가져갈 수 있기때문에
+      const payload = { id: user.id, username, role: user.role, vehicleInfo: vehicleInfo || null}; // payload에는 중요한 정보를 넣어두면안됨 토큰을 사용해서 정보를 가져갈 수 있기때문에
       const accessToken = await this.jwtService.sign(payload);
 
       return { accessToken };

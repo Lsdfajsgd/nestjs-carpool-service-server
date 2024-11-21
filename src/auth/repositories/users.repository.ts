@@ -1,13 +1,15 @@
 import {DataSource, Repository} from "typeorm";
-import {User} from "./user.entity";
+import {Users} from "../entities/users.entity";
 import {ConflictException, Injectable, InternalServerErrorException} from "@nestjs/common";
-import {AuthCredentialDto} from "./dto/auth-credential.dto";
+import {AuthCredentialDto} from "../dto/auth-credential.dto";
 import * as bcrypt from 'bcryptjs';
+import { UserRole } from "../dto/user-role.enum";
+import { VehicleInfo } from "../entities/vehicle-info.entity";
 
 @Injectable()
-export class UserRepository extends Repository<User>{
+export class UsersRepository extends Repository<Users>{
   constructor(private dataSource: DataSource) {
-    super(User, dataSource.createEntityManager());
+    super(Users, dataSource.createEntityManager());
   }
 
   async createUser(authCredentialDto: AuthCredentialDto): Promise<void> {
@@ -24,11 +26,17 @@ export class UserRepository extends Repository<User>{
       password: hashedPassword,
       phoneNumber,
       role,
-      vehicleModel: vehicleInfo?.model || null,
-      licensePlate: vehicleInfo?.licensePlate || null,
-      seatingCapacity: vehicleInfo?.seatingCapacity || null,
       points: 0,
     });
+
+    if (role === UserRole.DRIVER && vehicleInfo) {
+      const vehicle = new VehicleInfo();
+      vehicle.model = vehicleInfo.model;
+      vehicle.licensePlate = vehicleInfo.licensePlate;
+      vehicle.seatingCapacity = vehicleInfo.seatingCapacity;
+
+      user.vehicleInfo = vehicle;
+    }
 
     try {
       await this.save(user);
