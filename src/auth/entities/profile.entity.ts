@@ -34,7 +34,7 @@ export class Profile extends BaseEntity {
   })
   bio: string;
 
-  @OneToOne(() => VehicleInfo, { nullable: true, onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
-  vehicle: VehicleInfo | null;
+  // @OneToOne(() => VehicleInfo, { nullable: true, onDelete: 'CASCADE' })
+  // @JoinColumn({ name: 'user_id' })
+  // vehicle: VehicleInfo | null;
 }

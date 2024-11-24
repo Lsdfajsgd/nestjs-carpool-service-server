@@ -1,38 +1,58 @@
-import { BaseEntity, Column, Entity, OneToOne, PrimaryGeneratedColumn, Unique } from "typeorm";
+import {
+  BaseEntity,
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  Unique,
+  UpdateDateColumn
+} from "typeorm";
 import { UserRole } from "../dto/user-role.enum";
 import { VehicleInfo } from "./vehicle-info.entity";
 import { Profile } from "./profile.entity";
 
-@Entity()
+@Entity('users')
 @Unique(['username']) // email 유니크는 테스트를 위해 잠시 off
 export class Users extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ name: 'email', type: 'varchar', unique: true })
   email: string;
 
-  @Column()
-  username: string;
-
-  @Column()
+  @Column({ name: 'password', type: 'varchar' })
   password: string;
 
-  // 휴대전화 번호
-  @Column({ nullable: true })
+  @Column({ name: 'username', type: 'varchar', length: 100 })
+  username: string;
+
+  @Column({ name: 'phone_number', type: 'varchar', nullable: true })
   phoneNumber: string;
 
-  @Column({ type: 'enum', enum: UserRole })
+  @Column({ name: 'role', type: 'enum', enum: UserRole })
   role: UserRole;
 
-  @Column()
-  points : number;
+  @Column({ name: 'points', type: 'int', default: 0 })
+  points: number;
 
-  @OneToOne(() => VehicleInfo, (vehicleInfo) => vehicleInfo.user, { cascade: true, nullable: true })
-  vehicleInfo?: VehicleInfo;
+  @Column({ name: 'penalty_point', type: 'int', default: 0 })
+  penaltyPoint: number;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @Column({ name: 'last_login', type: 'timestamp', nullable: true })
+  lastLogin: Date;
 
   @Column({ name: 'refresh_token', type: 'varchar', nullable: true })
   refreshToken: string | null;
+
+  @OneToOne(() => VehicleInfo, (vehicleInfo) => vehicleInfo.user)
+  vehicleInfo: VehicleInfo;
 
   @OneToOne(() => Profile, (profile) => profile.user)
   profile: Profile;

@@ -1,8 +1,10 @@
-import {Body, Controller, Post, Req, UseGuards, ValidationPipe} from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards, ValidationPipe } from "@nestjs/common";
 import {AuthService} from "./auth.service";
 import {AuthCredentialDto} from "./dto/auth-credential.dto";
 import {AuthGuard} from "@nestjs/passport";
 import { AuthLoginDto } from "./dto/auth-login.dto";
+import { GetUser } from './get-user.decorator';
+import { Users } from "./entities/users.entity";
 
 @Controller('auth')
 export class AuthController {
@@ -25,6 +27,27 @@ export class AuthController {
   @UseGuards(AuthGuard())
   test(@Req() req){
       console.log('req', req);
+  }
+
+  @Get('/refresh')
+  @UseGuards(AuthGuard())
+  refresh(@GetUser() user: Users) {
+    return this.authService.refreshToken(user);
+  }
+
+  @Get('/me')
+  @UseGuards(AuthGuard())
+  getProfile(@Req() req: any) {
+    console.log('Authorization Header:', req.headers.authorization);
+    const user: Users = req.user; // JwtStrategy에서 리턴한 User 객체를 가져옴
+    return this.authService.getProfile(user);
+  }
+
+  @Post('/logout')
+  @UseGuards(AuthGuard())
+  logout(@GetUser() user: Users) {
+    console.log('Logout Authorization Header:', user);
+    return this.authService.deleteRefreshToken(user);
   }
 
 }

@@ -5,10 +5,19 @@ import { typeORMConfig } from "./configs/typeorm.config";
 import { MailModule } from './mail/mail.module';
 import { JwtConfigModule } from './jwt-config/jwt-config.module';
 import { MatchingModule } from './matching/matching.module';
+import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(typeORMConfig),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env'
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => typeORMConfig(configService)
+    }),
     AuthModule,
     MailModule,
     JwtConfigModule,

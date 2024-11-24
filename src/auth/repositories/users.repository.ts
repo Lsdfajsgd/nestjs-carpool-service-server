@@ -5,6 +5,7 @@ import {AuthCredentialDto} from "../dto/auth-credential.dto";
 import * as bcrypt from 'bcryptjs';
 import { UserRole } from "../dto/user-role.enum";
 import { VehicleInfo } from "../entities/vehicle-info.entity";
+import { Profile } from "../entities/profile.entity";
 
 @Injectable()
 export class UsersRepository extends Repository<Users>{
@@ -29,24 +30,40 @@ export class UsersRepository extends Repository<Users>{
       points: 0,
     });
 
-    if (role === UserRole.DRIVER && vehicleInfo) {
-      const vehicle = new VehicleInfo();
-      vehicle.model = vehicleInfo.model;
-      vehicle.licensePlate = vehicleInfo.licensePlate;
-      vehicle.seatingCapacity = vehicleInfo.seatingCapacity;
-
-      user.vehicleInfo = vehicle;
-    }
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
     try {
-      await this.save(user);
-    } catch (error){
-      // username 이 중복되어 발생하는 오류코드는 23505이다.
-      if (error.code === '23505') {
-        throw new ConflictException('Existing username');
+      const savedUser = await queryRunner.manager.save(user);
+
+      const profile = queryRunner.manager.create(Profile, {
+        userId: savedUser.id,
+        profilePicture: '', // 초기 프로필 사진 URL, 필요시 수정 가능
+        bio: '', // 초기 프로필 소개
+      });
+      await queryRunner.manager.save(profile);
+
+      if (role === "driver" && vehicleInfo) {
+        const vehicle = queryRunner.manager.create(VehicleInfo, {
+          userId: savedUser.id,
+          vehicleModel: vehicleInfo.model,
+          licensePlate: vehicleInfo.licensePlate,
+          seatingCapacity: vehicleInfo.seatingCapacity,
+        });
+        await queryRunner.manager.save(vehicle);
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      if (error.code === "23505") {
+        throw new ConflictException("Existing username or email");
       } else {
         throw new InternalServerErrorException();
       }
+    } finally {
+      await queryRunner.release();
     }
   }
 

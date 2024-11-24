@@ -10,6 +10,6 @@ export class VehicleInfoRepository extends Repository<VehicleInfo> {
 
   async findVehicleInfoByUserId(userId: number): Promise<VehicleInfo | undefined> {
     // 챠량정보 엔티티의 연결된 user기준으로 id탐색해서 그게 userId인 객체를 탐색후 반환
-    return this.findOne({ where: { user: { id: userId } } });
+    return this.findOne({ where: { userId }, select: ['vehicleModel', 'licensePlate', 'seatingCapacity'], });
   }
 }

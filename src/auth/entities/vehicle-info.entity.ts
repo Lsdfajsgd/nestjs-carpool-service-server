@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn
+} from "typeorm";
 import { Users } from "./users.entity";
 
 @Entity()
@@ -6,16 +14,27 @@ export class VehicleInfo {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  model: string;
+  @Column({ name: 'user_id' })
+  userId: number;
 
-  @Column()
+  @Column({ name: 'vehicle_model', type: 'varchar' })
+  vehicleModel: string;
+
+  @Column({ name: 'license_plate', type: 'varchar' })
   licensePlate: string;
 
-  @Column()
+  @Column({ name: 'seating_capacity', type: 'int' })
   seatingCapacity: number;
 
+  //@OneToOne(() => Users, (user) => user.vehicleInfo)
   @OneToOne(() => Users, (user) => user.vehicleInfo)
-  @JoinColumn()
+  @JoinColumn({ name: 'user_id' })
   user: Users;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
 }
