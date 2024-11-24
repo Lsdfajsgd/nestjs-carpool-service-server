@@ -16,12 +16,12 @@ import { UsersRepository } from "../auth/repositories/users.repository";
           host: 'smtp.gmail.com',
           port: 587,
           auth: {
-            user: 'developtest99990@gmail.com',
-            pass: 'tbys ydft cxih plnt',
+            user: process.env.EMAILADDRESS,
+            pass: process.env.EMAILPASSWORD,
           },
         },
         defaults: {
-          from: `'Energetic Company' <developtest99990@gmail.com>`,//보낸사람
+          from: `'Energetic Company' <${process.env.EMAILADDRESS}>`,//보낸사람
         },
       }),
     }),
