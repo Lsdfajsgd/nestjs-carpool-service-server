@@ -11,7 +11,7 @@ import { RideRequestsEntity } from '../matching/ride-requests.entity';
 @Injectable()
 export class ChatService {
     private rooms: { [room: string]: Set<number> } = {};
-    private messageLogs: { [room: string]: Array<{ id: number; message: string }> } = {};
+    private messageLogs: { [room: string]: Array<{ name: string; message: string }> } = {};
 
     constructor(
         private readonly jwtService: JwtService,
@@ -51,6 +51,7 @@ export class ChatService {
     async getRideRequestById(rideRequestId: number): Promise<RideRequestsEntity> {
         return this.dataSource.getRepository(RideRequestsEntity).findOne({
             where: { id: rideRequestId },
+            relations: ['driver'], // driver 관계 로드
         });
     }
     //rideRequest의 status 상태가 matched인지 가쟈오기
@@ -62,6 +63,28 @@ export class ChatService {
             relations: ['driver'],
         });
     }
+    //userId를 받아 그 Id의 유저 이름을 가져오기
+    async getUserNameById(userId: number): Promise<string | null> {
+        const userRepository = this.dataSource.getRepository(User);
+        const user = await userRepository.findOne({ where: { id: userId } });
+        return user?.name || null;
+    }
+
+    async getUserRoleById(userId: number): Promise<string | null> {
+        try {
+            // User 엔티티를 조회
+            const userRepository = this.dataSource.getRepository(User);
+            const user = await userRepository.findOne({ where: { id: userId } });
+    
+            // 사용자 역할 반환
+            return user?.role || null; // 역할이 없을 경우 null 반환
+        } catch (error) {
+            console.error(`Error fetching role for userId ${userId}:`, error.message);
+            return null;
+        }
+    }
+    
+
 
 
     async validateToken(token: string): Promise<number> {
@@ -131,7 +154,7 @@ export class ChatService {
         }
     }
 
-    addMessageToLog(room: string, message: { id: number; message: string }): void {
+    addMessageToLog(room: string, message: { name: string; message: string }): void {
         if (!this.rooms[room]) {
             throw new Error(`Room "${room}" does not exist.`);
         }
@@ -141,7 +164,7 @@ export class ChatService {
         this.messageLogs[room].push(message);
     }
 
-    getMessageLogs(room: string): Array<{ id: number; message: string }> {
+    getMessageLogs(room: string): Array<{ name: string; message: string }> {
         if (!this.rooms[room]) {
             throw new Error(`Room "${room}" does not exist.`);
         }

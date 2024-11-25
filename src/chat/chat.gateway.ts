@@ -19,17 +19,12 @@ export class ChatGateway {
   @WebSocketServer()
   server: Server;
 
-  //방변수 설정
-  // private rooms: { [room: string]: Set<number> } = {};
-
-  // 방별 메세지 로그를 저장
-  // private messageLogs: { [room: string]: Array<{ id: number; message: string }> } = {};
-
   async handleConnection(client: Socket) {
     const token = client.handshake.headers.authorization?.split(' ')[1];
 
     try {
       const userId = await this.chatService.validateToken(token); // await를 통해 Promise문제 해결+ ChatService를 통해 토큰 검증
+      const userName = await this.chatService.getUserNameById(userId);
       client.data.userId = userId; //클라이언트 데이터에 userId저장
 
       //사용자가 속한 방 확인 및 입장
@@ -43,7 +38,7 @@ export class ChatGateway {
         }
       });
 
-      console.log(`Client connected: user_Id[${userId}]`);
+      console.log(`Client connected: user_Name[${userName}]`);
     } catch (error) {
       client.emit('error', { message: error.message });
       client.disconnect();
@@ -71,23 +66,52 @@ export class ChatGateway {
     });
   }
 
-  @SubscribeMessage('send')
-  sendMessage(
-    @MessageBody() data: [string, string], //room과 message만 전달받음
-    @ConnectedSocket() client: Socket,
+    @SubscribeMessage('send')
+  async sendMessage(
+      @MessageBody() data: { room: string; message: string; coordinate?: { latitude: number; longitude: number } },
+      @ConnectedSocket() client: Socket,
   ) {
-    const [room, message] = data;
-    const userId = client.data.userId; // handleConnection에서 저장된 userId 활용
+      const { room, message, coordinate } = data;
+      const userId = client.data.userId; // handleConnection에서 저장된 userId 활용
+      const userName = await this.chatService.getUserNameById(userId);
 
-    try {
-      this.chatService.validateRoomAndUser(room, userId);
-      this.chatService.addMessageToLog(room, { id: userId, message });
-      this.server.to(room).emit('message', { userId, message });
-      console.log(`{ (${room}) user_Id [${userId}] } : `, message)
-    } catch (error) {
-      console.error(error.message);
-      client.emit('error', { message: error.message });
-    }
+      try {
+          // 방과 사용자가 유효한지 확인
+          this.chatService.validateRoomAndUser(room, userId);
+          //사용자 이름 조회
+
+          if (!userName) {
+              throw new Error('User name not found.');
+          }
+
+          // 메시지 로그에 추가
+          this.chatService.addMessageToLog(room, { name: userName, message });
+
+          // 메시지를 보낸 사용자가 driver인지 확인
+          const rideRequestId = parseInt(room.replace('ride_request_', ''), 10);
+          const rideRequest = await this.chatService.getRideRequestById(rideRequestId);
+
+          if (!rideRequest) {
+              throw new Error(`Ride request with ID ${rideRequestId} not found.`);
+          }
+
+          const isDriver = rideRequest.driver?.id === userId;
+
+          // 메시지 생성
+          const payload: any = {userName, message};
+          if (isDriver && coordinate) {
+              payload.coordinate = coordinate; // driver인 경우에만 위치 정보 추가
+              console.log(`Driver user_name[${userName}] sent a message with location:`, coordinate);
+          }
+
+          // 방에 메시지 브로드캐스트
+          this.server.to(room).emit('message', payload);
+          console.log(`{ (${room}) user_Id [${userId}] } : `, payload);
+
+      } catch (error) {
+          console.error(error.message);
+          client.emit('error', { message: error.message });
+      }
   }
 
   @SubscribeMessage('leave')
@@ -96,6 +120,7 @@ export class ChatGateway {
     @ConnectedSocket() client: Socket,
   ) {
     const userId = client.data.userId; // handleConnection에서 저장된 userId 활용
+    const userName = this.chatService.getUserNameById(userId);
 
     try {
       this.chatService.validateRoomAndUser(room, userId);
@@ -106,7 +131,7 @@ export class ChatGateway {
       }
 
       client.leave(room);
-      const leaveMessage = `User user_Id${userId} has left the room.`;
+      const leaveMessage = `User user_Name${userName} has left the room.`;
       this.server.to(room).emit('leaveRoom', { room, message: leaveMessage });
 
       const updatedUserList = this.chatService.getUsersInRoom(room);
@@ -114,7 +139,7 @@ export class ChatGateway {
         this.server.to(room).emit('userList', { room, users: updatedUserList });
       }
 
-      console.log(`user_Id[${userId}] left room [${room}].`);
+      console.log(`user_Name[${userName}] left room [${room}].`);
     } catch (error) {
       console.error(error.message);
       client.emit('error', { message: error.message });
@@ -124,22 +149,41 @@ export class ChatGateway {
 
   //유저 목록 출력
   @SubscribeMessage('getUserList')
-  getUserList(
+async getUserList(
     @MessageBody() room: string,
     @ConnectedSocket() client: Socket,
-  ) {
-    const userId = client.data.userId; // 현재 사용자의 username
+) {
+    const userId = client.data.userId;
 
     try {
-      this.chatService.validateRoomAndUser(room, userId);
-      const userList = this.chatService.getUsersInRoom(room);
-      client.emit('userList', { room, users: userList });
-      console.log(`User list for room [${room}]:`, userList);
+        // 방과 사용자가 유효한지 확인
+        this.chatService.validateRoomAndUser(room, userId);
+
+        // 방의 모든 사용자 ID 가져오기
+        const userIds = this.chatService.getUsersInRoom(room);
+
+        // 사용자 이름 조회
+        const userDetails = await Promise.all(
+            userIds.map(async (id) => {
+                const name = await this.chatService.getUserNameById(id);
+                const role = await this.chatService.getUserRoleById(id);
+                return {
+                  name: name || `Unknown(${id})`, // 이름이 없을 경우 ID 표시
+                  role: role || `Unknown`,
+                };
+            })
+        );
+
+
+        // 사용자 목록을 클라이언트로 전송
+        client.emit('userList', { room, users: userDetails });
+        console.log(`User list for room [${room}]:`, userDetails);
     } catch (error) {
-      console.error(error.message);
-      client.emit('error', { message: error.message });
+        console.error(error.message);
+        client.emit('error', { message: error.message });
     }
-  }
+}
+
 
   //메세지 로그 출력
   @SubscribeMessage('getMessageLog')
@@ -148,6 +192,7 @@ export class ChatGateway {
     @ConnectedSocket() client: Socket,
   ) {
     const userId = client.data.userId; // 현재 사용자의 username
+    const userName = this.chatService.getUserNameById(userId);
 
     try {
       this.chatService.validateRoomAndUser(room, userId);
