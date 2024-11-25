@@ -40,10 +40,10 @@ export class MatchingController {
   // 방 나가기
   @Post('/leave')
   @UseGuards(AuthGuard('jwt')) // JWT 인증 적용
-  async leaveMatch(@Req() req) {
+  async leaveMatch(@Body('rideRequestId') rideRequestId: number, @Req() req) {
     const user = req.user;
-    await this.matchingService.leaveMatch(user);
-    return { message: '매칭에서 성공적으로 나갔습니다.' };
+    await this.matchingService.leaveMatch(user, rideRequestId);
+    return { message: '매칭그룹에서 성공적으로 나갔습니다.' };
   }
 
   // 강퇴

@@ -17,10 +17,11 @@ export class MatchingService {
 
   private driverQueues: Map<string, MatchingRequestDto[]> = new Map(); // 출발지-목적지별 운전자 큐
   private passengerQueues: Map<string, MatchingRequestDto[]> = new Map(); // 출발지-목적지별 탑승자 큐
-  private matchingRooms: Map<string, { driver: MatchingRequestDto; passengers: MatchingRequestDto[] }> = new Map(); // 매칭된 그룹
+  private matchingRooms: Map<string, { driver: MatchingRequestDto; passengers: MatchingRequestDto[]; rideRequestId: number; }> = new Map(); // 매칭된 그룹
   private isProcessing: Map<string, boolean> = new Map(); // 각 큐별 처리 상태 관리
   private cancellations: Map<string, boolean> = new Map(); // 각 매칭 프로세스 별로 매칭 중단 여부 확인 관리
   private temporarilyMatchedPassengers: Set<string> = new Set(); // 임시로 매칭된 탑승자들의 username을 저장
+  private processingDrivers: Set<string> = new Set(); // 매칭 프로세스 중인 운전자
 
   constructor(
     @InjectRepository(RideRequestsRepository)
@@ -92,7 +93,7 @@ export class MatchingService {
 
 
   // 데이터 베이스 생성 로직
-  private async saveMatchToDatabase(driver: MatchingRequestDto, passengers: MatchingRequestDto[]): Promise<void> {
+  private async saveMatchToDatabase(driver: MatchingRequestDto, passengers: MatchingRequestDto[]): Promise<number> {
     const driverEntity = await this.userRepository.findOne({
       where: { username: driver.username },
     });
@@ -123,6 +124,9 @@ export class MatchingService {
     await this.ridePassengersRepository.savePassengersForRideRequest(savedRideRequest, passengerEntities);
 
     console.log('매칭 데이터를 데이터베이스에 성공적으로 저장했습니다.');
+
+    // 생성된 rideRequestId 반환
+    return savedRideRequest.id;
   }
 
   /**
@@ -160,16 +164,28 @@ export class MatchingService {
 
       if (!driverRequest) continue;
 
+      // **운전자를 processingDrivers에 추가**
+      this.processingDrivers.add(driverRequest.username);
+
       const result = await this.handleTimeout(driverRequest, passengerQueue, key);
+
+      // **매칭 프로세스가 완료되면 운전자를 processingDrivers에서 제거**
+      this.processingDrivers.delete(driverRequest.username);
 
       if (result.success) {
         // 매칭 성공 시 매칭룸에 추가
+        // this.matchingRooms.set(driverRequest.username, {
+        //   driver: driverRequest,
+        //   passengers: result.matchedPassengers,
+        // });
+
+        const rideRequestId = await this.saveMatchToDatabase(driverRequest, result.matchedPassengers);
+
         this.matchingRooms.set(driverRequest.username, {
           driver: driverRequest,
           passengers: result.matchedPassengers,
+          rideRequestId, // rideRequestId 저장
         });
-
-        await this.saveMatchToDatabase(driverRequest, result.matchedPassengers);
 
         console.log(`매칭룸 생성: 운전자 ${driverRequest.username}`, {
           driver: driverRequest,
@@ -328,6 +344,19 @@ export class MatchingService {
           driverQueue.filter((driver) => driver.username !== username)
         );
         console.log(`${username}이 ${key} 큐에서 제거되었습니다.`);
+
+        // **매칭 프로세스에서 운전자 제거**
+        if (this.processingDrivers.has(username)) {
+          this.processingDrivers.delete(username);
+          console.log(`매칭 프로세스에서 운전자 ${username}을 제거했습니다.`);
+        }
+
+        // 사실 없어도 될꺼같긴함.
+        // 매칭 그룹에서 운전자 제거
+        if (this.matchingRooms.has(username)) {
+          this.matchingRooms.delete(username);
+          console.log(`매칭 그룹에서 운전자 ${username}을 제거했습니다.`);
+        }
       } else {
         // 2. 운전자가 큐에 없고 매칭 프로세스가 활성화된 경우
         const isProcessingForDriver = this.isProcessing.get(key) && !this.matchingRooms.has(username);
@@ -385,28 +414,36 @@ export class MatchingService {
 
 
   // 매칭 진행 상황 확인 메서드
-  async getMatchingStatus(user: Users, key: string): Promise<MatchingStatus> {
+  async getMatchingStatus(user: Users, key: string): Promise<{status: MatchingStatus; rideRequestId: number }> {
     if (user.role === 'driver') {
       // 운전자인 경우
       if (this.matchingRooms.has(user.username)) {
-        return MatchingStatus.Matched; // 매칭 성공
+        // return MatchingStatus.Matched; // 매칭 성공
+        const room = this.matchingRooms.get(user.username)!;
+        return { status: MatchingStatus.Matched, rideRequestId: room.rideRequestId }; // rideRequestId 반환
       } else if (this.driverQueues.get(key)?.some((driver) => driver.username === user.username)) {
-        return MatchingStatus.Waiting; // 매칭 대기 중
+        return { status: MatchingStatus.Waiting, rideRequestId: -1 };
+      } else if (this.processingDrivers.has(user.username)){
+        return { status: MatchingStatus.Waiting, rideRequestId: -1 };
       } else {
-        return MatchingStatus.NotFound; // 매칭 정보 없음
+        return { status: MatchingStatus.NotFound, rideRequestId: -1 };// 매칭 정보 없음
       }
     } else if (user.role === 'passenger') {
       // 탑승자인 경우
-      const isMatched = Array.from(this.matchingRooms.values()).some((room) =>
+      // const isMatched = Array.from(this.matchingRooms.values()).some((room) =>
+      //   room.passengers.some((passenger) => passenger.username === user.username)
+      // );
+
+      const matchedRoom = Array.from(this.matchingRooms.values()).find((room) =>
         room.passengers.some((passenger) => passenger.username === user.username)
       );
 
-      if (isMatched) {
-        return MatchingStatus.Matched; // 매칭 성공
+      if (matchedRoom) {
+        return { status: MatchingStatus.Matched, rideRequestId: matchedRoom.rideRequestId }; // rideRequestId 반환
       } else if (this.passengerQueues.get(key)?.some((passenger) => passenger.username === user.username)) {
-        return MatchingStatus.Waiting; // 매칭 대기 중
+        return { status: MatchingStatus.Waiting, rideRequestId: -1 };
       } else {
-        return MatchingStatus.NotFound; // 매칭 정보 없음
+        return { status: MatchingStatus.NotFound, rideRequestId: -1 };
       }
     } else {
       throw new Error('유효하지 않은 사용자 역할입니다.');
@@ -416,11 +453,11 @@ export class MatchingService {
 
 
   // 개인 나가기 요청 처리 메서드
-  async leaveMatch(user: Users): Promise<void> {
+  async leaveMatch(user: Users, rideRequestId: number): Promise<void> {
     if (user.role === 'driver') {
       // 운전자일 경우, RideRequest와 관련된 모든 데이터를 삭제
       const rideRequest = await this.rideRequestsRepository.findOne({
-        where: { driver: { id: user.id } },
+        where: { id: rideRequestId, driver: { id: user.id } },
         relations: ['passengers'],
       });
 
@@ -434,12 +471,15 @@ export class MatchingService {
         console.log(`운전자 ${user.username}의 매칭이 취소되고 모든 관련 데이터가 삭제되었습니다.`);
       } else {
         console.log(`운전자 ${user.username}의 매칭 정보를 찾을 수 없습니다.`);
+        throw new UnauthorizedException('해당 매칭에 대한 권한이 없습니다.');
       }
     } else if (user.role === 'passenger') {
       // 탑승자일 경우, 해당 탑승자의 RidePassenger 데이터만 삭제
       const ridePassenger = await this.ridePassengersRepository.findOne({
-        where: { passenger: { id: user.id } },
-        relations: ['rideRequest'],
+        where: {
+          rideRequest: { id: rideRequestId },
+          passenger: { id: user.id },
+        },
       });
 
       if (ridePassenger) {
@@ -447,6 +487,7 @@ export class MatchingService {
         console.log(`탑승자 ${user.username}의 매칭이 취소되었습니다.`);
       } else {
         console.log(`탑승자 ${user.username}의 매칭 정보를 찾을 수 없습니다.`);
+        throw new UnauthorizedException('해당 매칭에 대한 권한이 없습니다.');
       }
     }
   }
