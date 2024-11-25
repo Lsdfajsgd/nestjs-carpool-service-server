@@ -36,6 +36,7 @@ export class RideRequestsRepository extends Repository<RideRequestsEntity> {
   ): Promise<RideRequestsEntity> {
     // RideRequest 생성 및 저장
     const rideRequest = this.create({
+      driverId: driverEntity.id,
       driver: driverEntity,
       start_location_id: driverRequest.origin,
       destination_location_id: driverRequest.destination,

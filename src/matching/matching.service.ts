@@ -201,7 +201,6 @@ export class MatchingService {
   ): Promise<{ success: boolean; matchedPassengers: MatchingRequestDto[] }> {
     const { origin, destination, departureTime, seatingCapacity } = driverRequest;
     const matchedPassengers: MatchingRequestDto[] = [];
-    let isCancelled = false; // 취소 여부 플래그
 
     const { username: driverUsername } = driverRequest;
     const driverCancellationKey = `${key}-${driverUsername}`;
@@ -224,16 +223,31 @@ export class MatchingService {
           return;
         }
 
+        const passengerQueue = this.passengerQueues.get(key) || [];
+
         // 탑승자 큐에서 취소한 탑승자 제거
-        passengerQueue = passengerQueue.filter((passenger) => {
+        for (let i = passengerQueue.length - 1; i >= 0; i--) {
+          const passenger = passengerQueue[i];
           const passengerCancellationKey = `${key}-${passenger.username}`;
           if (this.cancellations.get(passengerCancellationKey)) {
             console.log(`탑승자 ${passenger.username}의 매칭 취소 요청.`);
-            this.cancellations.delete(passengerCancellationKey);  // 취소 플래그 삭제
-            return false; // 큐에서 제거
+            this.cancellations.delete(passengerCancellationKey); // 취소 플래그 삭제
+            this.temporarilyMatchedPassengers.delete(passenger.username);
+            passengerQueue.splice(i, 1); // 큐에서 제거
           }
-          return true;
-        });
+        }
+
+        // 탑승자 큐에서 취소한 탑승자 제거
+        // passengerQueue = passengerQueue.filter((passenger) => {
+        //   const passengerCancellationKey = `${key}-${passenger.username}`;
+        //   if (this.cancellations.get(passengerCancellationKey)) {
+        //     console.log(`탑승자 ${passenger.username}의 매칭 취소 요청.`);
+        //     this.cancellations.delete(passengerCancellationKey);  // 취소 플래그 삭제
+        //     this.temporarilyMatchedPassengers.delete(passenger.username);
+        //     return false; // 큐에서 제거
+        //   }
+        //   return true;
+        // });
 
 
         console.log(`${driverRequest.username} 매칭중입니다...`)
@@ -324,6 +338,11 @@ export class MatchingService {
           this.cancellations.set(cancellationKey, true);
           console.log(`프로세스 중단: ${key}에서 운전자 ${username}의 매칭 취소.`);
           return;
+        }
+
+        if (this.matchingRooms.has(username)) {
+          this.matchingRooms.delete(username);
+          console.log(`매칭 그룹에서 운전자 ${username}을 제거했습니다.`);
         }
 
         console.log(`${username}은 매칭 큐에도 없고, 매칭 프로세스 중도 아닙니다.`);

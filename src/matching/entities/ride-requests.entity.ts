@@ -5,7 +5,7 @@ import {
   ManyToOne,
   OneToMany,
   CreateDateColumn,
-  UpdateDateColumn,
+  UpdateDateColumn, JoinColumn
 } from "typeorm";
 import { Users } from "../../auth/entities/users.entity";
 import { RidePassengersEntity } from "./ride-passengers.entity"; // 유저 엔티티와 연결
@@ -15,7 +15,11 @@ export class RideRequestsEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ name: 'driver_id' })
+  driverId: number;
+
   @ManyToOne(() => Users, (user) => user.id, { nullable: false })
+  @JoinColumn({ name: 'driver_id' }) // 외래 키 컬럼명 지정
   driver: Users; // 운전자 ID와 관계 설정
 
   @Column()
