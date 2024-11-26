@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException
+} from "@nestjs/common";
 import { MatchingRequestDto } from './dto/matching-request.dto';
 import { JwtService } from '@nestjs/jwt';
 import { VehicleInfo } from "../auth/entities/vehicle-info.entity";
@@ -11,6 +17,7 @@ import { RidePassengersEntity } from "./entities/ride-passengers.entity";
 import { Users } from "../auth/entities/users.entity";
 import { VehicleInfoRepository } from "../auth/repositories/vehicle-info.repository";
 import { MatchingStatus } from "./matching-status.enum";
+import { TripsRepository } from "./repositories/trips.repository";
 
 @Injectable()
 export class MatchingService {
@@ -23,6 +30,8 @@ export class MatchingService {
   private temporarilyMatchedPassengers: Set<string> = new Set(); // 임시로 매칭된 탑승자들의 username을 저장
   private processingDrivers: Set<string> = new Set(); // 매칭 프로세스 중인 운전자
 
+  private activeUsers: Set<string> = new Set(); // 현재 매칭 요청 중인 사용자들 -> 중복매칭요청방지를 위한 메모리.. 사용할 수밖에 없음..
+
   constructor(
     @InjectRepository(RideRequestsRepository)
     private rideRequestsRepository: RideRequestsRepository,
@@ -32,6 +41,8 @@ export class MatchingService {
     private userRepository: UsersRepository,
     @InjectRepository(VehicleInfoRepository)
     private vehicleInfoRepository: VehicleInfoRepository,
+    @InjectRepository(TripsRepository)
+    private tripsRepository: TripsRepository,
     private readonly jwtService: JwtService
   ) {}
 
@@ -40,12 +51,17 @@ export class MatchingService {
   async addMatchRequest(request: MatchingRequestDto, user: Users): Promise<void> {
     const { username, role } = user;
 
-
-    if (username !== request.username) {
-      throw new UnauthorizedException('Invalid username: Username in the request does not match the token');
+    // **전역 Set에서 사용자 존재 여부 확인**
+    if (this.activeUsers.has(username)) {
+      throw new ConflictException('이미 매칭 요청 중입니다.');
     }
 
-    const key = `${request.origin}-${request.destination}`; // 큐를 구분하는 키
+    // **사용자를 전역 Set에 추가**
+    this.activeUsers.add(username);
+
+    request.username = username;
+
+    const key = `${request.startPoint}-${request.endPoint}`; // 큐를 구분하는 키
     const cancellationKey = `${key}-${username}`;
     this.cancellations.delete(cancellationKey); // 요청한 사용자의 이전 취소 플래그 삭제(초기화)
 
@@ -160,7 +176,7 @@ export class MatchingService {
       const driverRequest = driverQueue.shift()!;
       //const driverRequest = this.getDriverRequest(driverUsername, key, );
 
-      console.log(driverRequest.departureTime);
+      console.log(driverRequest.endPoint);
 
       if (!driverRequest) continue;
 
@@ -192,10 +208,15 @@ export class MatchingService {
           passengers: result.matchedPassengers,
         });
 
+        // **탑승자들도 전역 Set에서 제거**
+        result.matchedPassengers.forEach((passenger) => {
+          this.activeUsers.delete(passenger.username);
+        });
+
       } else {
         console.log(`운전자 ${driverRequest.username}의 매칭취소로 다음 큐 진행을 하겠습니다.`);
-        //continue;
-        //driverQueue.push(driverRequest); // 다시 큐에 추가
+        // **매칭 프로세스가 완료되면 운전자를 전역 Set에서 제거**
+        this.activeUsers.delete(driverRequest.username);
       }
 
       this.logMatchingRoomsSummary();
@@ -215,7 +236,7 @@ export class MatchingService {
     passengerQueue: MatchingRequestDto[],
     key: string
   ): Promise<{ success: boolean; matchedPassengers: MatchingRequestDto[] }> {
-    const { origin, destination, departureTime, seatingCapacity } = driverRequest;
+    const { startPoint, endPoint, requestTime, seatingCapacity } = driverRequest;
     const matchedPassengers: MatchingRequestDto[] = [];
 
     const { username: driverUsername } = driverRequest;
@@ -287,9 +308,9 @@ export class MatchingService {
           }
 
           if (
-            passengerRequest.origin === origin &&
-            passengerRequest.destination === destination &&
-            this.isWithinTimeRange(passengerRequest.departureTime, departureTime)
+            passengerRequest.startPoint === startPoint &&
+            passengerRequest.endPoint === endPoint//&&
+            //this.isWithinTimeRange(passengerRequest.requestTime, requestTime)
           ) {
             matchedPassengers.push(passengerRequest);
             //passengerQueue.splice(i, 1); // 큐에서 제거
@@ -490,6 +511,114 @@ export class MatchingService {
         throw new UnauthorizedException('해당 매칭에 대한 권한이 없습니다.');
       }
     }
+  }
+
+
+  //운행 시작 메소드
+  async agreeToStartRide(user: Users, rideRequestId: number): Promise<void> {
+    if (user.role === 'passenger') {
+      // Update passenger's status to 'confirmed'
+      const ridePassenger = await this.ridePassengersRepository.findOne({
+        where: {
+          rideRequest: { id: rideRequestId },
+          passenger: { id: user.id },
+        },
+      });
+
+      if (!ridePassenger) {
+        throw new NotFoundException('매칭 정보를 찾을 수 없습니다.');
+      }
+
+      ridePassenger.status = 'confirmed';
+      await this.ridePassengersRepository.save(ridePassenger);
+
+      console.log(`탑승자 ${user.username}이 운행을 동의하였습니다.`);
+    } else if (user.role === 'driver') {
+      // Check if all passengers have confirmed
+      const rideRequest = await this.rideRequestsRepository.findOne({
+        where: { id: rideRequestId, driver: { id: user.id } },
+        relations: ['passengers', 'passengers.passenger'],
+      });
+
+      if (!rideRequest) {
+        throw new NotFoundException('운행 정보를 찾을 수 없습니다.');
+      }
+
+      const unconfirmedPassengers = rideRequest.passengers.filter(
+        (rp) => rp.status !== 'confirmed',
+      );
+
+      if (unconfirmedPassengers.length > 0) {
+        throw new BadRequestException('아직 모든 탑승자가 운행을 동의하지 않았습니다.');
+      }
+
+      // Create a new trip
+      const newTrip = this.tripsRepository.create({
+        rideRequest: rideRequest,
+        start_time: new Date(),
+      });
+
+      await this.tripsRepository.save(newTrip);
+
+      console.log(`운전자 ${user.username}이 운행을 시작하였습니다.`);
+    } else {
+      throw new BadRequestException('유효하지 않은 사용자 역할입니다.');
+    }
+  }
+
+
+  async completeRide(user: Users, rideRequestId: number): Promise<void> {
+    if (user.role !== 'driver') {
+      throw new UnauthorizedException('운전자만 운행을 완료할 수 있습니다.');
+    }
+
+    // Check if the driver is associated with the rideRequestId
+    const rideRequest = await this.rideRequestsRepository.findOne({
+      where: { id: rideRequestId, driver: { id: user.id } },
+      relations: ['passengers', 'passengers.passenger'],
+    });
+
+    if (!rideRequest) {
+      throw new NotFoundException('운행 정보를 찾을 수 없습니다.');
+    }
+
+    // Check if all passengers have confirmed
+    const unconfirmedPassengers = rideRequest.passengers.filter(
+      (rp) => rp.status !== 'confirmed',
+    );
+
+    if (unconfirmedPassengers.length > 0) {
+      throw new BadRequestException('아직 모든 탑승자가 운행을 동의하지 않았습니다.');
+    }
+
+    // Update the ride request status to 'completed'
+    rideRequest.status = 'completed';
+    await this.rideRequestsRepository.save(rideRequest);
+
+    // Update the trip's end_time
+    const trip = await this.tripsRepository.findOne({
+      where: { rideRequest: { id: rideRequestId } },
+    });
+
+    if (trip) {
+      trip.end_time = new Date();
+      await this.tripsRepository.save(trip);
+    }
+
+    // Remove users from activeUsers and delete matching room
+    if (this.matchingRooms.has(user.username)) {
+      const room = this.matchingRooms.get(user.username)!;
+      // Remove users from activeUsers
+      this.activeUsers.delete(user.username);
+      room.passengers.forEach((passenger) => {
+        this.activeUsers.delete(passenger.username);
+      });
+      // Delete the matching room
+      this.matchingRooms.delete(user.username);
+      console.log(`매칭룸에서 운전자 ${user.username}을 제거했습니다.`);
+    }
+
+    console.log(`운전자 ${user.username}이 운행을 완료하였습니다.`);
   }
 
 

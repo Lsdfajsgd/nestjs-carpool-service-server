@@ -8,6 +8,7 @@ import { JwtStrategy } from "../auth/jwt.strategy";
 import { RideRequestsRepository } from "./repositories/ride-requests.repository";
 import { RidePassengersRepository } from "./repositories/ride-passengers.repository";
 import { VehicleInfoRepository } from "../auth/repositories/vehicle-info.repository";
+import { TripsRepository } from "./repositories/trips.repository";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { VehicleInfoRepository } from "../auth/repositories/vehicle-info.reposit
     TypeOrmModule.forFeature([RideRequestsRepository]),
     TypeOrmModule.forFeature([RidePassengersRepository]),
     TypeOrmModule.forFeature([VehicleInfoRepository]),
+    TypeOrmModule.forFeature([TripsRepository])
   ],
   controllers: [MatchingController],
   providers: [
@@ -24,6 +26,7 @@ import { VehicleInfoRepository } from "../auth/repositories/vehicle-info.reposit
     RideRequestsRepository,
     RidePassengersRepository,
     VehicleInfoRepository,
+    TripsRepository,
     JwtStrategy
   ]
 })
