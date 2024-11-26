@@ -4,7 +4,7 @@ import { MailService } from './mail.service';
 import { MailController } from './mail.controller';
 import { JwtConfigModule } from "../jwt-config/jwt-config.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { UserRepository } from "../auth/user.repository";
+import { UserRepository } from "../auth/repositories/user.repository";
 
 
 @Module({

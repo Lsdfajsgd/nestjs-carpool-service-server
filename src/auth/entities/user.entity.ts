@@ -6,7 +6,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn, OneToOne,
 } from 'typeorm';
-import { UserRole } from './dto/user-role.enum';
+import { UserRole } from '../dto/user-role.enum';
 import { Profile } from './profile.entity';
 
 @Entity('users')

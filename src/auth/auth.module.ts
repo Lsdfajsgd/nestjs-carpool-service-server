@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UserRepository } from './user.repository';
+import { UserRepository } from './repositories/user.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { MailModule } from '../mail/mail.module';
 import { JwtConfigModule } from '../jwt-config/jwt-config.module';
-import { User } from './user.entity';
-import { VehicleRepository } from './vehicle.repository';
+import { User } from './entities/user.entity';
+import { VehicleRepository } from './repositories/vehicle.repository';
 
 @Module({
   imports: [

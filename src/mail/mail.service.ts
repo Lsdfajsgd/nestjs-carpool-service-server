@@ -1,7 +1,7 @@
 // src/mail/mail.service.ts
 import { BadRequestException, ConflictException, GoneException, Injectable } from "@nestjs/common";
 import { MailerService } from '@nestjs-modules/mailer';
-import { UserRepository } from '../auth/user.repository';
+import { UserRepository } from '../auth/repositories/user.repository';
 
 @Injectable()
 export class MailService {

@@ -1,10 +1,11 @@
 import { DataSource, Repository } from "typeorm";
-import { User } from "./user.entity";
-import { Vehicle } from "./vehicle.entity";
+import { User } from "../entities/user.entity";
+import { Vehicle } from "../entities/vehicle.entity";
 import { ConflictException, Injectable, InternalServerErrorException } from "@nestjs/common";
-import { AuthCredentialDto } from "./dto/auth-credential.dto";
+import { AuthCredentialDto } from "../dto/auth-credential.dto";
+// import { UserRole } from "../dto/user-role.enum";
 import * as bcrypt from "bcryptjs";
-import { Profile } from './profile.entity';
+import { Profile } from '../entities/profile.entity';
 
 @Injectable()
 export class UserRepository extends Repository<User> {

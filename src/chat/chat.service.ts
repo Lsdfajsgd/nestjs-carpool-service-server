@@ -2,11 +2,11 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserRepository } from 'src/auth/user.repository';
-import { User } from 'src/auth/user.entity';
+import { UserRepository } from '../auth/repositories/user.repository';
+import { User } from '../auth/entities/user.entity';
 import { DataSource } from 'typeorm';
-import { RidePassengersEntity } from '../matching/ride-passengers.entity';
-import { RideRequestsEntity } from '../matching/ride-requests.entity';
+import { RidePassengersEntity } from '../matching/entities/ride-passengers.entity';
+import { RideRequestsEntity } from '../matching/entities/ride-requests.entity';
 
 @Injectable()
 export class ChatService {

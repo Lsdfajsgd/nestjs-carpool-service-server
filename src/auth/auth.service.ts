@@ -5,13 +5,13 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserRepository } from './user.repository';
-import { VehicleRepository } from './vehicle.repository';
+import { UserRepository } from './repositories/user.repository';
+import { VehicleRepository } from './repositories/vehicle.repository';
 import { AuthCredentialDto } from './dto/auth-credential.dto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { AuthLoginDto } from './dto/auth-login.dto';
-import { User } from './user.entity';
+import { User } from './entities/user.entity';
 import { ConfigService } from '@nestjs/config';
 import * as stream from 'node:stream';
 
