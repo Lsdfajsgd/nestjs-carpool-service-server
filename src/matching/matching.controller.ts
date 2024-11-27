@@ -46,6 +46,24 @@ export class MatchingController {
     return { message: '매칭그룹에서 성공적으로 나갔습니다.' };
   }
 
+  // 운행동의(시작)
+  @Post('/agree')
+  @UseGuards(AuthGuard('jwt'))
+  async agreeToStartRide(@Body('rideRequestId') rideRequestId: number, @Req() req) {
+    const user = req.user;
+    await this.matchingService.agreeToStartRide(user, rideRequestId);
+    return { message: '운행 동의가 처리되었습니다.' };
+  }
+
+  // 운행완료
+  @Post('/complete')
+  @UseGuards(AuthGuard('jwt'))
+  async completeRide(@Body('rideRequestId') rideRequestId: number, @Req() req) {
+    const user = req.user;
+    await this.matchingService.completeRide(user, rideRequestId);
+    return { message: '운행이 완료되었습니다.' };
+  }
+
   // 강퇴
   @Post('/kick')
   @UseGuards(AuthGuard('jwt')) // JWT 인증 적용

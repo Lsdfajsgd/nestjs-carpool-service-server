@@ -38,9 +38,9 @@ export class RideRequestsRepository extends Repository<RideRequestsEntity> {
     const rideRequest = this.create({
       driverId: driverEntity.id,
       driver: driverEntity,
-      start_location_id: driverRequest.origin,
-      destination_location_id: driverRequest.destination,
-      pickup_time: new Date(driverRequest.departureTime),
+      start_location_id: driverRequest.startPoint,
+      destination_location_id: driverRequest.endPoint,
+      request_time: new Date(driverRequest.requestTime),
       limited_passenger_nums: driverRequest.seatingCapacity || 0,
       status: 'matched',
     });

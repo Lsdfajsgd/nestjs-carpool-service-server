@@ -10,7 +10,7 @@ import {
 import { Users } from "../../auth/entities/users.entity";
 import { RidePassengersEntity } from "./ride-passengers.entity"; // 유저 엔티티와 연결
 
-@Entity()
+@Entity('ride_requests')
 export class RideRequestsEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -29,7 +29,7 @@ export class RideRequestsEntity {
   destination_location_id: number; // 목적지 ID
 
   @Column({ type: "datetime" })
-  pickup_time: Date; // 픽업 시간
+  request_time: Date; // 운전자 요청시간
 
   @Column()
   limited_passenger_nums: number; // 제한된 탑승 인원 수
