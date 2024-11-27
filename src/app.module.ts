@@ -6,6 +6,7 @@ import { MailModule } from './mail/mail.module';
 import { JwtConfigModule } from './jwt-config/jwt-config.module';
 import { MatchingModule } from './matching/matching.module';
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     AuthModule,
     MailModule,
     JwtConfigModule,
-    MatchingModule
+    MatchingModule,
+    ChatModule
   ],
 })
 export class AppModule {}
