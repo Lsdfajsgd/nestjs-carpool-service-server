@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
 import {InjectRepository} from "@nestjs/typeorm";
 import {UsersRepository} from "./repositories/users.repository";
@@ -10,38 +9,14 @@ import { VehicleInfoRepository } from "./repositories/vehicle-info.repository";
 import { Users } from "./entities/users.entity";
 import { ConfigService } from '@nestjs/config';
 import { VehicleInfo } from "./entities/vehicle-info.entity";
-=======
-import {
-  BadRequestException,
-  Injectable,
-  UnauthorizedException,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { UserRepository } from './repositories/user.repository';
-import { VehicleRepository } from './repositories/vehicle.repository';
-import { AuthCredentialDto } from './dto/auth-credential.dto';
-import * as bcrypt from 'bcryptjs';
-import { JwtService } from '@nestjs/jwt';
-import { AuthLoginDto } from './dto/auth-login.dto';
-import { User } from './entities/user.entity';
-import { ConfigService } from '@nestjs/config';
-import * as stream from 'node:stream';
->>>>>>> devlop
 
 @Injectable()
 export class AuthService {
   constructor(
-<<<<<<< HEAD
     @InjectRepository(UsersRepository)
     private userRepository: UsersRepository,
     @InjectRepository(VehicleInfoRepository)
     private vehicleInfoRepository: VehicleInfoRepository,
-=======
-    @InjectRepository(UserRepository)
-    private userRepository: UserRepository,
-    private vehicleRepository: VehicleRepository,
->>>>>>> devlop
     // jwt 서비스 등록
     private jwtService: JwtService,
     private configService: ConfigService,
@@ -53,7 +28,6 @@ export class AuthService {
   }
 
   // 로그인
-<<<<<<< HEAD
   // async signIn(authLoginDto: AuthLoginDto): Promise<{accessToken: string}> {
   //   const { username, password } = authLoginDto;
   //   // username으로 fineOne()을 사용해서 해당 유저가 존재하는지 확인후 결과값 user에 저장
@@ -81,29 +55,15 @@ export class AuthService {
     const { username, password } = authLoginDto;
     const user = await this.validateToken(username, password);
     const tokens = await this.getTokens({ id: user.id});
-=======
-  async signIn(
-    authLoginDto: AuthLoginDto,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    const { name, password } = authLoginDto;
-    const user = await this.validateToken(name, password);
-    const tokens = await this.getTokens({ id: user.id });
->>>>>>> devlop
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
     return tokens;
   }
 
   async refreshToken(
-<<<<<<< HEAD
     user: Users,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const payload = { id: user.id};
-=======
-    user: User,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    const payload = { id: user.id };
->>>>>>> devlop
     const accessTokenExpiresIn = parseInt(
       this.configService.get<string>('JWT_ACCESS_EXPIRATION'),
       10,
@@ -124,11 +84,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-<<<<<<< HEAD
   async getProfile(user: Users): Promise<{
-=======
-  async getProfile(user: User): Promise<{
->>>>>>> devlop
     name: string;
     email: string;
     phoneNumber: string;
@@ -150,19 +106,11 @@ export class AuthService {
     }
     const vehicleInfo =
       userWithProfile.role === 'driver'
-<<<<<<< HEAD
         ? await this.vehicleInfoRepository.findVehicleInfoByUserId(user.id)
         : null;
 
     return {
       name: userWithProfile.username,
-=======
-        ? await this.vehicleRepository.findVehicleByUserId(user.id)
-        : null;
-
-    return {
-      name: userWithProfile.name,
->>>>>>> devlop
       email: userWithProfile.email,
       phoneNumber: userWithProfile.phoneNumber,
       role: userWithProfile.role,
@@ -172,26 +120,15 @@ export class AuthService {
       },
       vehicleInfo: vehicleInfo
         ? {
-<<<<<<< HEAD
           model: vehicleInfo.vehicleModel,
           licensePlate: vehicleInfo.licensePlate,
           seatingCapacity: vehicleInfo.seatingCapacity,
         }
-=======
-            model: vehicleInfo.vehicleModel,
-            licensePlate: vehicleInfo.licensePlate,
-            seatingCapacity: vehicleInfo.seatingCapacity,
-          }
->>>>>>> devlop
         : null,
     };
   }
 
-<<<<<<< HEAD
   private async getTokens(payload: { id: number}) {
-=======
-  private async getTokens(payload: { id: number }) {
->>>>>>> devlop
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
     if (!jwtSecret)
       throw new InternalServerErrorException(
@@ -219,13 +156,8 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-<<<<<<< HEAD
   private async validateToken(username: string, password: string): Promise<Users> {
     const user = await this.userRepository.findOne({ where: { username } });
-=======
-  private async validateToken(name: string, password: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { name } });
->>>>>>> devlop
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException(
         '아이디 또는 비밀번호가 일치하지 않습니다.',
@@ -243,7 +175,6 @@ export class AuthService {
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();
-<<<<<<< HEAD
     }
   }
 
@@ -254,18 +185,8 @@ export class AuthService {
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();
-=======
->>>>>>> devlop
+
     }
   }
 
-  async deleteRefreshToken(user: User) {
-    try {
-      console.log("user ", user.refreshToken);
-      await this.userRepository.update(user.id, { refreshToken: null });
-    } catch (error) {
-      console.log(error);
-      throw new InternalServerErrorException();
-    }
-  }
 }

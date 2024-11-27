@@ -13,5 +13,4 @@ export class AuthLoginDto {
     message: 'password only accepts english and number',
   })
   password: string;
-
 }

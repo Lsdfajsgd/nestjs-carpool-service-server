@@ -4,12 +4,7 @@ import { MailService } from './mail.service';
 import { MailController } from './mail.controller';
 import { JwtConfigModule } from "../jwt-config/jwt-config.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
-<<<<<<< HEAD
 import { UsersRepository } from "../auth/repositories/users.repository";
-=======
-import { UserRepository } from "../auth/repositories/user.repository";
->>>>>>> devlop
-
 
 @Module({
   imports: [

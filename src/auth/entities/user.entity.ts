@@ -35,19 +35,10 @@ export class User extends BaseEntity {
   @Column({ name: 'penalty_point', type: 'int', default: 0 })
   penaltyPoint: number;
 
-  @CreateDateColumn({
-    name: 'created_at',
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn({
-    name: 'updated_at',
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-    onUpdate: 'CURRENT_TIMESTAMP',
-  })
+  @UpdateDateColumn()
   updatedAt: Date;
 
   @Column({ name: 'last_login', type: 'timestamp', nullable: true })

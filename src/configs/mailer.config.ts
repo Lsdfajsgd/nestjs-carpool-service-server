@@ -23,8 +23,5 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
   ],
 })
-<<<<<<< HEAD
 export class MailModule {}
-=======
-export class MailModule {}
->>>>>>> devlop
+

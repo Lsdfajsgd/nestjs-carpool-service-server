@@ -8,10 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
 
-<<<<<<< HEAD
     // JWT 모듈 등록
-=======
->>>>>>> devlop
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

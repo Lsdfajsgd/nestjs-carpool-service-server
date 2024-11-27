@@ -1,15 +1,9 @@
 import {Injectable, UnauthorizedException} from "@nestjs/common";
 import {PassportStrategy} from "@nestjs/passport";
 import {InjectRepository} from "@nestjs/typeorm";
-<<<<<<< HEAD
 import {UsersRepository} from "./repositories/users.repository";
 import {ExtractJwt, Strategy} from "passport-jwt"; // passport 가 아닌 passport-jwt에서 가져와야함 jwt전략을 사용하기 때문에
 import {Users} from "./entities/users.entity";
-=======
-import {UserRepository} from "./repositories/user.repository";
-import {ExtractJwt, Strategy} from "passport-jwt"; // passport 가 아닌 passport-jwt에서 가져와야함 jwt전략을 사용하기 때문에
-import {User} from "./entities/user.entity";
->>>>>>> devlop
 
 // 우리는 모든 유효한 요청에는 유저 정보가 들어 있기를 원함.
 // 이것을 이용해서 이 유저가 어드민 유저인지 또는 어떠한 게시물을 지울수 있는 사람인지 판단하기 위해서 요청 안에서 유저정보를 넣는 것.,
@@ -30,8 +24,6 @@ export class JwtStrategy extends PassportStrategy(Strategy){
     });
   }
 
-<<<<<<< HEAD
-
   async validate(payload) : Promise<Users> {
     const {id} = payload;
     //payload에 있는 유저이름이 데이터베이스에서 있는 유저인지 확인
@@ -40,17 +32,6 @@ export class JwtStrategy extends PassportStrategy(Strategy){
     if (!user) {
       // 존재하지 않을 시 에러를 던져줌.
       throw new UnauthorizedException(`Can't find user with username ${id}`);
-=======
-  async validate(payload) : Promise<User> {
-    const {name} = payload;
-    //payload에 있는 유저이름이 데이터베이스에서 있는 유저인지 확인
-    console.log("Payload received:", payload);
-    const user =  await this.userRepository.findOne({ where: { name } });
-
-    if (!user) {
-      // 존재하지 않을 시 에러를 던져줌.
-      throw new UnauthorizedException(`Can't find user with username ${name}`);
->>>>>>> devlop
     }
 
     return user;
