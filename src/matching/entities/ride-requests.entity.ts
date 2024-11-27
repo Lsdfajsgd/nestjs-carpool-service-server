@@ -10,7 +10,7 @@ import {
 import { Users } from "../../auth/entities/users.entity";
 import { RidePassengersEntity } from "./ride-passengers.entity"; // 유저 엔티티와 연결
 
-@Entity('ride_requests')
+@Entity()
 export class RideRequestsEntity {
   @PrimaryGeneratedColumn()
   id: number;

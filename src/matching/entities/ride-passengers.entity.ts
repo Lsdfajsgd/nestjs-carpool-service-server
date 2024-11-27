@@ -8,7 +8,7 @@ import {
 import { Users } from "../../auth/entities/users.entity";
 import { RideRequestsEntity } from "./ride-requests.entity"; // 라이드 요청과 연결
 
-@Entity('ride_passengers')
+@Entity()
 export class RidePassengersEntity {
   @PrimaryGeneratedColumn()
   id: number;
