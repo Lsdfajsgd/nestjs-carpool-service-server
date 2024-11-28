@@ -25,9 +25,7 @@ export class ReviewsEntity {
     @JoinColumn({ name: 'target_id' }) // 외래 키 이름
     target: Users;
 
-    @IsInt()
-    @Min(1)
-    @Max(5)
+    @Column()
     rating: number;
 
     @CreateDateColumn()
