@@ -1,7 +1,7 @@
 // trips.entity.ts
-
-import { Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn, OneToMany} from 'typeorm';
 import { RideRequestsEntity } from './ride-requests.entity';
+import { ReviewsEntity } from 'src/reviews/entities/reviews.entity';
 
 @Entity('trips')
 export class TripsEntity {
@@ -17,4 +17,7 @@ export class TripsEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   end_time: Date;
+  // Reviews와 양방향 관계 설정
+  @OneToMany(() => ReviewsEntity, (review) => review.match)
+  reviews: ReviewsEntity[];
 }

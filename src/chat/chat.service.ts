@@ -1,11 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-// import { UserRepository } from '../auth/repositories/user.repository';
 import { Users } from '../auth/entities/users.entity';
 import { DataSource } from 'typeorm';
-// import { RidePassengersEntity } from '../matching/entities/ride-passengers.entity';
 import { RideRequestsEntity } from '../matching/entities/ride-requests.entity';
 
 @Injectable()

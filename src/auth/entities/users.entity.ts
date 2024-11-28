@@ -6,11 +6,13 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn
+  UpdateDateColumn,
+  OneToMany
 } from "typeorm";
 import { UserRole } from "../dto/user-role.enum";
 import { VehicleInfo } from "./vehicle-info.entity";
 import { Profile } from "./profile.entity";
+import { ReviewsEntity } from "src/reviews/entities/reviews.entity";
 
 @Entity('users')
 @Unique(['username']) // email 유니크는 테스트를 위해 잠시 off
@@ -56,6 +58,14 @@ export class Users extends BaseEntity {
 
   @OneToOne(() => Profile, (profile) => profile.user)
   profile: Profile;
+
+  // 작성한 리뷰
+  @OneToMany(() => ReviewsEntity, (review) => review.reviewer)
+  reviewsWritten: ReviewsEntity[];
+
+  // 받은 리뷰
+  @OneToMany(() => ReviewsEntity, (review) => review.target)
+  reviewsReceived: ReviewsEntity[];
 
 
 }

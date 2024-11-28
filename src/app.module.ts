@@ -7,6 +7,7 @@ import { JwtConfigModule } from './jwt-config/jwt-config.module';
 import { MatchingModule } from './matching/matching.module';
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ChatModule } from './chat/chat.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { ChatModule } from './chat/chat.module';
     MailModule,
     JwtConfigModule,
     MatchingModule,
-    ChatModule
+    ChatModule,
+    ReviewsModule
   ],
 })
 export class AppModule {}
