@@ -36,10 +36,10 @@ export class ReviewsRepository extends Repository<ReviewsEntity> {
     }
 
     // 특정 Trip과 Reviewer 조합으로 리뷰 중복 확인
-    async findExistingReview(tripId: number, reviewerId: number): Promise<ReviewsEntity | null> {
+    async findExistingReview(rideRequestId: number, reviewerId: number): Promise<ReviewsEntity | null> {
         return this.findOne({
-            where: { match: { id: tripId }, reviewer: { id: reviewerId } },
-            relations: ['match', 'reviewer'], // 관계 데이터 포함
+            where: { match: { rideRequest: { id: rideRequestId } }, reviewer: { id: reviewerId } },
+            relations: ['match', 'reviewer', 'match.rideRequest'], // 필요한 관계 포함
         });
     }
 }

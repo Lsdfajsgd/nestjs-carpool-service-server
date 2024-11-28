@@ -33,8 +33,8 @@ export class ReviewsService {
         }
 
         // ride_request 상태 확인 (completed만 허용)
-        const rideRequest = await this.rideRequestsRepository.findOne({ where: { id: trip.rideRequest.id } });
-        if (!rideRequest || rideRequest.status !== 'completed') {
+        const rideRequest = trip.rideRequest;
+        if (rideRequest.status !== 'completed') {
             throw new BadRequestException('ride_request가 completed가 아닙니다.');
         }
 
@@ -62,7 +62,7 @@ export class ReviewsService {
         return this.reviewsRepository.save(review);
     }
 
-    async getDriverReviews(driverId: number): Promise<{ reviews: {reviewer: string, rating: number, createdAt: Date }[],averageRating: number }> {
+    async getDriverReviews(driverId: number): Promise<{ reviews: { reviewer: string, rating: number, createdAt: Date }[], averageRating: number }> {
         //id가 driver인지 확인 
         const driver = await this.usersRepository.findOne({ where: { id: driverId } });
         if (!driver || driver.role !== 'driver') {
