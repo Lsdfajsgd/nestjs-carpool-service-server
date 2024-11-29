@@ -37,10 +37,21 @@ export class ReviewsService {
             throw new BadRequestException('Trip을 찾을 수 없습니다.');
         }
 
-        // ride_request 상태 확인 (completed만 허용)
         const rideRequest = trip.rideRequest;
+
+        // ride_request의 stauts가 completed인지 확인
         if (rideRequest.status !== 'completed') {
             throw new BadRequestException('ride_request가 completed가 아닙니다.');
+        }
+
+        // driver 정보를 가져오기
+        const rideRequestWithDriver = await this.rideRequestsRepository.findOne({
+            where: { id: rideRequestId },
+            relations: ['driver'],
+        });
+
+        if (!rideRequestWithDriver || !rideRequestWithDriver.driver) {
+            throw new BadRequestException('운전자를 찾을 수 없습니다.');
         }
 
         // 리뷰어가 passenger인지 확인
@@ -48,7 +59,7 @@ export class ReviewsService {
             where: { rideRequest: { id: rideRequest.id }, passenger: { id: user.id } },
         });
         if (!isPassenger) {
-            throw new BadRequestException('passenger만 리뷰를 작성할 수 있습니다.');
+            throw new BadRequestException('해당 ride_request의 passenger만 리뷰를 작성할 수 있습니다.');
         }
 
         // 기존 리뷰가 있는지 확인
@@ -57,14 +68,8 @@ export class ReviewsService {
             throw new BadRequestException('이미 리뷰를 작성 했습니다.');
         }
 
-        // target (driver) 찾기
-        const rideRequestWithDriver = await this.rideRequestsRepository.findOne({
-            where: { id: rideRequestId },
-            relations: ['driver'],
-        });
-
-        if (!rideRequestWithDriver || !rideRequestWithDriver.driver) {
-            throw new BadRequestException('운전자를 찾을 수 없습니다.');
+        if (rideRequestWithDriver.driver.id !== trip.rideRequest.driverId) {
+            throw new BadRequestException('리뷰 대상 운전자가 올바르지 않습니다.');
         }
 
         // 리뷰생성
