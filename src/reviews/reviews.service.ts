@@ -68,9 +68,7 @@ export class ReviewsService {
             throw new BadRequestException('이미 리뷰를 작성 했습니다.');
         }
 
-        if (rideRequestWithDriver.driver.id !== trip.rideRequest.driverId) {
-            throw new BadRequestException('리뷰 대상 운전자가 올바르지 않습니다.');
-        }
+
 
         // 리뷰생성
         const review = this.reviewsRepository.create({
