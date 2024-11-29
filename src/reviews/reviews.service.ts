@@ -14,15 +14,15 @@ import { CreateReviewDto } from './dto/create-review.dto';
 @Injectable()
 export class ReviewsService {
     constructor(
-      private readonly reviewsRepository: ReviewsRepository,
-      @InjectRepository(Users)
-      private readonly usersRepository: Repository<Users>,
-      @InjectRepository(TripsEntity)
-      private readonly tripsRepository: Repository<TripsEntity>,
-      @InjectRepository(RideRequestsEntity)
-      private readonly rideRequestsRepository: Repository<RideRequestsEntity>,
-      @InjectRepository(RidePassengersEntity)
-      private readonly ridePassengersRepository: Repository<RidePassengersEntity>,
+        private readonly reviewsRepository: ReviewsRepository,
+        @InjectRepository(Users)
+        private readonly usersRepository: Repository<Users>,
+        @InjectRepository(TripsEntity)
+        private readonly tripsRepository: Repository<TripsEntity>,
+        @InjectRepository(RideRequestsEntity)
+        private readonly rideRequestsRepository: Repository<RideRequestsEntity>,
+        @InjectRepository(RidePassengersEntity)
+        private readonly ridePassengersRepository: Repository<RidePassengersEntity>,
     ) { }
 
     async createReview(createReviewDto: CreateReviewDto, user: Users): Promise<ReviewsEntity> {
@@ -109,8 +109,8 @@ export class ReviewsService {
         }));
 
         const averageRating = reviews.length > 0
-          ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-          : 0;
+            ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+            : 0;
 
         return { reviews: transformedReviews, averageRating };
     }
