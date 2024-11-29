@@ -11,10 +11,15 @@ import { RidePassengersEntity } from 'src/matching/entities/ride-passengers.enti
 import { RideRequestsEntity } from 'src/matching/entities/ride-requests.entity';
 import { RidePassengersRepository } from 'src/matching/repositories/ride-passengers.repository';
 import { RideRequestsRepository } from 'src/matching/repositories/ride-requests.repository';
+import { JwtStrategy } from "../auth/jwt.strategy";
+import { JwtConfigModule } from "../jwt-config/jwt-config.module";
+import { UsersRepository } from "../auth/repositories/users.repository";
 
 @Module({
   imports: [
+    JwtConfigModule,
     TypeOrmModule.forFeature([ReviewsEntity, TripsEntity, Users, RidePassengersEntity,RideRequestsEntity]), // 엔티티 주입
+    TypeOrmModule.forFeature([ReviewsRepository, TripsRepository, UsersRepository, RideRequestsRepository, RidePassengersRepository])
   ],
   controllers: [ReviewsController],
   providers: [
@@ -22,7 +27,9 @@ import { RideRequestsRepository } from 'src/matching/repositories/ride-requests.
     ReviewsRepository, // Repository 추가
     TripsRepository,
     RidePassengersRepository,
-    RideRequestsRepository
+    RideRequestsRepository,
+    UsersRepository,
+    JwtStrategy
   ],
   exports: [ReviewsService], // 필요시 다른 모듈에서 사용할 수 있도록 export
 })
