@@ -36,7 +36,7 @@ export class RidePassengersRepository extends Repository<RidePassengersEntity> {
       const ridePassenger = this.create({
         passenger,
         rideRequest: savedRideRequest,
-        status: 'confirmed',
+        status: 'matched',
       });
 
       await this.save(ridePassenger);

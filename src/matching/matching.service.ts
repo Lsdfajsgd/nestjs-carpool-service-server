@@ -189,14 +189,9 @@ export class MatchingService {
       this.processingDrivers.delete(driverRequest.username);
 
       if (result.success) {
-        // 매칭 성공 시 매칭룸에 추가
-        // this.matchingRooms.set(driverRequest.username, {
-        //   driver: driverRequest,
-        //   passengers: result.matchedPassengers,
-        // });
-
         const rideRequestId = await this.saveMatchToDatabase(driverRequest, result.matchedPassengers);
 
+        // 매칭 성공 시 매칭룸에 추가
         this.matchingRooms.set(driverRequest.username, {
           driver: driverRequest,
           passengers: result.matchedPassengers,
@@ -206,11 +201,6 @@ export class MatchingService {
         console.log(`매칭룸 생성: 운전자 ${driverRequest.username}`, {
           driver: driverRequest,
           passengers: result.matchedPassengers,
-        });
-
-        // **탑승자들도 전역 Set에서 제거**
-        result.matchedPassengers.forEach((passenger) => {
-          this.activeUsers.delete(passenger.username);
         });
 
       } else {
@@ -273,19 +263,6 @@ export class MatchingService {
             passengerQueue.splice(i, 1); // 큐에서 제거
           }
         }
-
-        // 탑승자 큐에서 취소한 탑승자 제거
-        // passengerQueue = passengerQueue.filter((passenger) => {
-        //   const passengerCancellationKey = `${key}-${passenger.username}`;
-        //   if (this.cancellations.get(passengerCancellationKey)) {
-        //     console.log(`탑승자 ${passenger.username}의 매칭 취소 요청.`);
-        //     this.cancellations.delete(passengerCancellationKey);  // 취소 플래그 삭제
-        //     this.temporarilyMatchedPassengers.delete(passenger.username);
-        //     return false; // 큐에서 제거
-        //   }
-        //   return true;
-        // });
-
 
         console.log(`${driverRequest.username} 매칭중입니다...`)
         console.log(` ${key} : 대기 중인 탑승자 `)
@@ -421,21 +398,29 @@ export class MatchingService {
       this.temporarilyMatchedPassengers.delete(username);
     }
 
+    // **사용자가 매칭을 취소했을 때 activeUsers에서 제거**
+    this.activeUsers.delete(username);
   }
 
-  /**
-   * 시간 범위 비교
-   */
-  private isWithinTimeRange(time1: string, time2: string): boolean {
-    const time1Date = new Date(time1);
-    const time2Date = new Date(time2);
-    const diff = Math.abs(time1Date.getTime() - time2Date.getTime());
-    return diff <= 5 * 60 * 1000; // 5분 이내
+  // 리퀘스트 completed 확인 메서드
+  private async ensureNotCompleted(rideRequestId: number): Promise<void> {
+    const rideRequest = await this.rideRequestsRepository.findOne({
+      where: { id: rideRequestId },
+    });
+
+    if (!rideRequest) {
+      throw new NotFoundException(`Ride request with id ${rideRequestId} not found.`);
+    }
+
+    if (rideRequest.status === 'completed') {
+      throw new BadRequestException('This ride request has already been completed.');
+    }
   }
 
 
   // 매칭 진행 상황 확인 메서드
   async getMatchingStatus(user: Users, key: string): Promise<{status: MatchingStatus; rideRequestId: number }> {
+
     if (user.role === 'driver') {
       // 운전자인 경우
       if (this.matchingRooms.has(user.username)) {
@@ -472,9 +457,12 @@ export class MatchingService {
   }
 
 
-
   // 개인 나가기 요청 처리 메서드
   async leaveMatch(user: Users, rideRequestId: number): Promise<void> {
+
+    // 리퀘스트 상태 확인
+    await this.ensureNotCompleted(rideRequestId);
+
     if (user.role === 'driver') {
       // 운전자일 경우, RideRequest와 관련된 모든 데이터를 삭제
       const rideRequest = await this.rideRequestsRepository.findOne({
@@ -488,6 +476,18 @@ export class MatchingService {
 
         // RideRequest 삭제
         await this.rideRequestsRepository.delete({ id: rideRequest.id });
+
+        // **매칭룸에서 해당 운전자의 username을 키로 매칭룸 삭제**
+        if (this.matchingRooms.has(user.username)) { // 변경 전: rideRequestId 키 사용 -> 변경 후: driverUsername 키 사용
+          this.matchingRooms.delete(user.username);
+          console.log(`매칭룸에서 운전자 ${user.username}을 제거했습니다.`);
+        }
+
+        // **activeUsers에서 운전자와 탑승자 제거**
+        this.activeUsers.delete(user.username);
+        rideRequest.passengers.forEach((rp) => {
+          this.activeUsers.delete(rp.passenger.username);
+        });
 
         console.log(`운전자 ${user.username}의 매칭이 취소되고 모든 관련 데이터가 삭제되었습니다.`);
       } else {
@@ -506,6 +506,9 @@ export class MatchingService {
       if (ridePassenger) {
         await this.ridePassengersRepository.delete({ id: ridePassenger.id });
         console.log(`탑승자 ${user.username}의 매칭이 취소되었습니다.`);
+
+        // **탑승자가 매칭을 떠났으므로 activeUsers에서 제거**
+        this.activeUsers.delete(user.username);
       } else {
         console.log(`탑승자 ${user.username}의 매칭 정보를 찾을 수 없습니다.`);
         throw new UnauthorizedException('해당 매칭에 대한 권한이 없습니다.');
@@ -516,6 +519,10 @@ export class MatchingService {
 
   //운행 시작 메소드
   async agreeToStartRide(user: Users, rideRequestId: number): Promise<void> {
+
+    // 리퀘스트 상태 확인
+    await this.ensureNotCompleted(rideRequestId);
+
     if (user.role === 'passenger') {
       // Update passenger's status to 'confirmed'
       const ridePassenger = await this.ridePassengersRepository.findOne({
@@ -567,12 +574,12 @@ export class MatchingService {
   }
 
 
+  // 운행완료
   async completeRide(user: Users, rideRequestId: number): Promise<void> {
-    if (user.role !== 'driver') {
-      throw new UnauthorizedException('운전자만 운행을 완료할 수 있습니다.');
-    }
 
-    // Check if the driver is associated with the rideRequestId
+    // 리퀘스트 상태 확인
+    await this.ensureNotCompleted(rideRequestId);
+
     const rideRequest = await this.rideRequestsRepository.findOne({
       where: { id: rideRequestId, driver: { id: user.id } },
       relations: ['passengers', 'passengers.passenger'],
@@ -582,7 +589,10 @@ export class MatchingService {
       throw new NotFoundException('운행 정보를 찾을 수 없습니다.');
     }
 
-    // Check if all passengers have confirmed
+    if (user.role !== 'driver') {
+      throw new UnauthorizedException('운전자만 운행을 완료할 수 있습니다.');
+    }
+
     const unconfirmedPassengers = rideRequest.passengers.filter(
       (rp) => rp.status !== 'confirmed',
     );
@@ -591,11 +601,9 @@ export class MatchingService {
       throw new BadRequestException('아직 모든 탑승자가 운행을 동의하지 않았습니다.');
     }
 
-    // Update the ride request status to 'completed'
     rideRequest.status = 'completed';
     await this.rideRequestsRepository.save(rideRequest);
 
-    // Update the trip's end_time
     const trip = await this.tripsRepository.findOne({
       where: { rideRequest: { id: rideRequestId } },
     });
@@ -605,15 +613,12 @@ export class MatchingService {
       await this.tripsRepository.save(trip);
     }
 
-    // Remove users from activeUsers and delete matching room
     if (this.matchingRooms.has(user.username)) {
       const room = this.matchingRooms.get(user.username)!;
-      // Remove users from activeUsers
       this.activeUsers.delete(user.username);
       room.passengers.forEach((passenger) => {
         this.activeUsers.delete(passenger.username);
       });
-      // Delete the matching room
       this.matchingRooms.delete(user.username);
       console.log(`매칭룸에서 운전자 ${user.username}을 제거했습니다.`);
     }

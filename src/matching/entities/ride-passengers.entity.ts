@@ -8,7 +8,7 @@ import {
 import { Users } from "../../auth/entities/users.entity";
 import { RideRequestsEntity } from "./ride-requests.entity"; // 라이드 요청과 연결
 
-@Entity()
+@Entity("ride-passengers")
 export class RidePassengersEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -19,7 +19,7 @@ export class RidePassengersEntity {
   @ManyToOne(() => Users, (user) => user.id, { nullable: false })
   passenger: Users; // 탑승자 ID와 관계 설정
 
-  @Column({ type: "enum", enum: ["pending", "confirmed", "cancelled"], default: "pending" })
+  @Column({ type: "enum", enum: ["matched", "confirmed"], default: "matched" })
   status: string; // 상태 (enum 타입)
 
   @CreateDateColumn()
