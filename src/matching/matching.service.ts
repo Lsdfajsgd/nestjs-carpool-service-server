@@ -501,11 +501,44 @@ export class MatchingService {
           rideRequest: { id: rideRequestId },
           passenger: { id: user.id },
         },
+        relations: ['rideRequest', 'rideRequest.driver'],
       });
 
       if (ridePassenger) {
         await this.ridePassengersRepository.delete({ id: ridePassenger.id });
         console.log(`탑승자 ${user.username}의 매칭이 취소되었습니다.`);
+
+        // 매칭룸에서 해당 탑승자를 제거
+        //const rideRequest = ridePassenger.rideRequest;
+
+        // 데이터베이스를 통해 운전자의 username을 가져옴
+        const driverUsername = ridePassenger.rideRequest.driver.username;
+
+        // 매칭룸에서 해당 운전자의 매칭룸을 가져옴
+        const room = this.matchingRooms.get(driverUsername);
+
+        if (room) {
+          // 탑승자 리스트에서 해당 탑승자를 제거
+          room.passengers = room.passengers.filter(
+            (passenger) => passenger.username !== user.username,
+          );
+          console.log(`매칭룸에서 탑승자 ${user.username}을 제거했습니다.`);
+
+          // 탑승자 리스트가 비어 있는 경우 추가 로직 실행
+          if (room.passengers.length === 0) {
+            // 매칭룸 삭제
+            this.matchingRooms.delete(driverUsername);
+            console.log(`탑승자가 모두 나가 매칭룸 ${driverUsername}을 삭제했습니다.`);
+
+            // 운전자를 activeUsers에서 제거하여 매칭 가능 상태로 만듦
+            this.activeUsers.delete(driverUsername);
+            console.log(`운전자 ${driverUsername}을 activeUsers에서 제거하여 매칭 가능 상태로 변경했습니다.`);
+
+            // 운전자에 대한 RideRequest 삭제
+            await this.rideRequestsRepository.delete({ id: rideRequestId });
+            console.log(`운전자 ${driverUsername}의 RideRequest를 삭제했습니다.`);
+          }
+        }
 
         // **탑승자가 매칭을 떠났으므로 activeUsers에서 제거**
         this.activeUsers.delete(user.username);
