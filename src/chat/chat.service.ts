@@ -142,6 +142,13 @@ export class ChatService {
         }
     }
 
+    deleteMessage(room: string){
+        if(this.messageLogs[room]){
+            delete this.messageLogs[room];
+            console.log(`Message "${room}" messages has been deleted.`);
+        }
+    }
+
     validateRoomAndUser(room: string, userId: number): void {
         if (!this.rooms[room]) {
             throw new Error(`Room "${room}" does not exist.`);

@@ -128,6 +128,7 @@ export class ChatGateway {
 
       if (this.chatService.getUsersInRoom(room).length === 0) {
         this.chatService.deleteRoom(room);
+        this.chatService.deleteMessage(room);
       }
 
       client.leave(room);
